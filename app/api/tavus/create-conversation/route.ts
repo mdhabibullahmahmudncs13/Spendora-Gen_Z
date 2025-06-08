@@ -186,7 +186,13 @@ Your mission: Be their trusted financial guide, helping them make informed decis
         errorMessage = 'Tavus server error. Please try again later.';
       }
       
-      throw new Error(errorMessage);
+      return NextResponse.json(
+        { 
+          error: 'Failed to create video conversation',
+          details: errorMessage
+        },
+        { status: response.status }
+      );
     }
 
     const conversationData = await response.json();
