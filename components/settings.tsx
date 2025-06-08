@@ -1,17 +1,22 @@
 'use client';
 
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { User } from '@/types';
-import { Settings as SettingsIcon, User as UserIcon, LogOut, Video, Mic, Brain, Sparkles, Shield, Zap } from 'lucide-react';
+import { Settings as SettingsIcon, User as UserIcon, LogOut, Video, Mic, Brain, Sparkles, Shield, Zap, Edit3 } from 'lucide-react';
+import { EditProfileModal } from '@/components/edit-profile-modal';
 
 interface SettingsProps {
   user: User;
   onLogout: () => void;
+  onUpdateUser: (updatedUser: User) => void;
 }
 
-export function Settings({ user, onLogout }: SettingsProps) {
+export function Settings({ user, onLogout, onUpdateUser }: SettingsProps) {
+  const [showEditProfile, setShowEditProfile] = useState(false);
+
   return (
     <div className="space-y-8 p-6">
       {/* Hero Section */}
@@ -55,8 +60,11 @@ export function Settings({ user, onLogout }: SettingsProps) {
                 {new Date(user.createdAt).toLocaleDateString()}
               </p>
             </div>
-            <Button variant="outline" className="w-full h-12 border-2 border-blue-300 hover:bg-gradient-to-r hover:from-blue-500 hover:to-indigo-600 hover:text-white hover:border-transparent transition-all duration-300" disabled>
-              <Sparkles className="h-4 w-4 mr-2" />
+            <Button 
+              onClick={() => setShowEditProfile(true)}
+              className="w-full h-12 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold transition-all duration-300 transform hover:scale-105"
+            >
+              <Edit3 className="h-4 w-4 mr-2" />
               Edit Profile
             </Button>
           </CardContent>
@@ -284,6 +292,14 @@ export function Settings({ user, onLogout }: SettingsProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Profile Modal */}
+      <EditProfileModal
+        isOpen={showEditProfile}
+        onClose={() => setShowEditProfile(false)}
+        user={user}
+        onUpdateUser={onUpdateUser}
+      />
     </div>
   );
 }

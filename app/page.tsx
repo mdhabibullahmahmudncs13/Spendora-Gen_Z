@@ -65,6 +65,10 @@ export default function Home() {
     setShowAuthModal(true);
   };
 
+  const handleUpdateUser = (updatedUser: User) => {
+    setUser(updatedUser);
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen bg-background">
@@ -93,7 +97,7 @@ export default function Home() {
       case 'reports':
         return <Reports expenses={expenses} />;
       case 'settings':
-        return <Settings user={user} onLogout={handleLogout} />;
+        return <Settings user={user} onLogout={handleLogout} onUpdateUser={handleUpdateUser} />;
       default:
         return <Dashboard expenses={expenses} user={user} />;
     }
