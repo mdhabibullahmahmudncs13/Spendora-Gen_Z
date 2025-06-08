@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { DollarSign, TrendingUp, TrendingDown, CreditCard, Bot, Video, Mic, Spar
 import { RecentExpenses } from '@/components/recent-expenses';
 import { ExpenseChart } from '@/components/expense-chart';
 import { AIInsights } from '@/components/ai-insights';
+import { VideoAdvisorModal } from '@/components/video-advisor-modal';
 
 interface DashboardProps {
   expenses: Expense[];
@@ -17,6 +19,8 @@ interface DashboardProps {
 }
 
 export function Dashboard({ expenses, user, goals = [] }: DashboardProps) {
+  const [showVideoAdvisor, setShowVideoAdvisor] = useState(false);
+  
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   
@@ -309,10 +313,13 @@ export function Dashboard({ expenses, user, goals = [] }: DashboardProps) {
                   <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">Video Agent Ready</p>
                 </div>
               </div>
-              <Button variant="outline" className="w-full group hover:bg-gradient-to-r hover:from-emerald-500 hover:to-teal-600 hover:text-white transition-all duration-300" disabled>
+              <Button 
+                onClick={() => setShowVideoAdvisor(true)}
+                className="w-full group bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white transition-all duration-300"
+              >
                 <Video className="h-4 w-4 mr-2 group-hover:animate-pulse" />
                 Talk to AI Advisor
-                <Badge variant="secondary" className="ml-2 bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700">Tavus</Badge>
+                <Badge variant="secondary" className="ml-2 bg-white/20 text-white border-0">Tavus</Badge>
               </Button>
             </div>
           </CardContent>
@@ -354,6 +361,14 @@ export function Dashboard({ expenses, user, goals = [] }: DashboardProps) {
         <ExpenseChart expenses={currentMonthTransactions.filter(t => t.type === 'expense')} />
         <RecentExpenses expenses={expenses.slice(-10)} />
       </div>
+
+      {/* Video Advisor Modal */}
+      <VideoAdvisorModal
+        isOpen={showVideoAdvisor}
+        onClose={() => setShowVideoAdvisor(false)}
+        user={user}
+        expenses={expenses}
+      />
     </div>
   );
 }
