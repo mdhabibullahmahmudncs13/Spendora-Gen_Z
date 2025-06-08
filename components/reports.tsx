@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Expense } from '@/types';
-import { TrendingUp, Download, Calendar, BarChart3, PieChart, Bot, Sparkles, Target, Zap } from 'lucide-react';
+import { TrendingUp, Download, Calendar, BarChart3, PieChart, Bot, Sparkles, Target, Zap, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { ExpenseChart } from '@/components/expense-chart';
 import { CategoryBreakdown } from '@/components/category-breakdown';
 import { MonthlyTrends } from '@/components/monthly-trends';
@@ -18,17 +18,36 @@ export function Reports({ expenses }: ReportsProps) {
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
   
-  const currentMonthExpenses = expenses.filter(expense => {
+  const currentMonthTransactions = expenses.filter(expense => {
     const expenseDate = new Date(expense.date);
     return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
   });
 
-  const totalThisMonth = currentMonthExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  // Separate income and expenses
+  const currentMonthIncome = currentMonthTransactions
+    .filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + t.amount, 0);
   
-  const categoryTotals = currentMonthExpenses.reduce((acc, expense) => {
-    acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
-    return acc;
-  }, {} as Record<string, number>);
+  const currentMonthExpenses = currentMonthTransactions
+    .filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const netIncome = currentMonthIncome - currentMonthExpenses;
+  const savingsRate = currentMonthIncome > 0 ? ((currentMonthIncome - currentMonthExpenses) / currentMonthIncome) * 100 : 0;
+  
+  const categoryTotals = currentMonthTransactions
+    .filter(t => t.type === 'expense')
+    .reduce((acc, expense) => {
+      acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
+      return acc;
+    }, {} as Record<string, number>);
+
+  const incomeCategoryTotals = currentMonthTransactions
+    .filter(t => t.type === 'income')
+    .reduce((acc, income) => {
+      acc[income.category] = (acc[income.category] || 0) + income.amount;
+      return acc;
+    }, {} as Record<string, number>);
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -47,7 +66,7 @@ export function Reports({ expenses }: ReportsProps) {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-4xl font-bold mb-2">Financial Reports 📊</h1>
-              <p className="text-xl text-purple-100 mb-6">Comprehensive analysis of your spending patterns</p>
+              <p className="text-xl text-purple-100 mb-6">Comprehensive analysis of your income and expenses</p>
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2 bg-white/20 rounded-full px-4 py-2">
                   <Target className="h-5 w-5" />
@@ -82,17 +101,17 @@ export function Reports({ expenses }: ReportsProps) {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-4">
         <Card className="gradient-card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Monthly Total</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Monthly Income</CardTitle>
             <div className="p-2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600">
-              <TrendingUp className="h-4 w-4 text-white" />
+              <ArrowUpCircle className="h-4 w-4 text-white" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-              ${totalThisMonth.toFixed(2)}
+              ${currentMonthIncome.toFixed(2)}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
               {monthNames[currentMonth]} {currentYear}
@@ -102,17 +121,34 @@ export function Reports({ expenses }: ReportsProps) {
 
         <Card className="gradient-card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Categories</CardTitle>
-            <div className="p-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-600">
-              <PieChart className="h-4 w-4 text-white" />
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Monthly Expenses</CardTitle>
+            <div className="p-2 rounded-full bg-gradient-to-r from-red-500 to-pink-600">
+              <ArrowDownCircle className="h-4 w-4 text-white" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              {Object.keys(categoryTotals).length}
+            <div className="text-3xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+              ${currentMonthExpenses.toFixed(2)}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-              Active spending categories
+              {Object.keys(categoryTotals).length} expense categories
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="gradient-card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-0">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Net Income</CardTitle>
+            <div className={`p-2 rounded-full bg-gradient-to-r ${netIncome >= 0 ? 'from-emerald-500 to-teal-600' : 'from-red-500 to-pink-600'}`}>
+              <TrendingUp className="h-4 w-4 text-white" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-3xl font-bold ${netIncome >= 0 ? 'bg-gradient-to-r from-emerald-600 to-teal-600' : 'bg-gradient-to-r from-red-600 to-pink-600'} bg-clip-text text-transparent`}>
+              ${netIncome.toFixed(2)}
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+              {savingsRate.toFixed(1)}% savings rate
             </p>
           </CardContent>
         </Card>
@@ -126,10 +162,10 @@ export function Reports({ expenses }: ReportsProps) {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              {currentMonthExpenses.length}
+              {currentMonthTransactions.length}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-              This month's expenses
+              This month's transactions
             </p>
           </CardContent>
         </Card>
@@ -137,8 +173,82 @@ export function Reports({ expenses }: ReportsProps) {
 
       {/* Charts Section */}
       <div className="grid gap-6 md:grid-cols-2">
-        <ExpenseChart expenses={currentMonthExpenses} />
-        <CategoryBreakdown expenses={currentMonthExpenses} />
+        <ExpenseChart expenses={currentMonthTransactions.filter(t => t.type === 'expense')} />
+        <CategoryBreakdown expenses={currentMonthTransactions.filter(t => t.type === 'expense')} />
+      </div>
+
+      {/* Income vs Expenses Comparison */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="gradient-card hover:shadow-2xl transition-all duration-300 border-0">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3 text-xl">
+              <div className="p-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600">
+                <ArrowUpCircle className="h-5 w-5 text-white" />
+              </div>
+              <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                Income Sources
+              </span>
+            </CardTitle>
+            <CardDescription>Your income breakdown by category</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {Object.keys(incomeCategoryTotals).length > 0 ? (
+              <div className="space-y-3">
+                {Object.entries(incomeCategoryTotals)
+                  .sort(([,a], [,b]) => b - a)
+                  .map(([category, amount]) => (
+                    <div key={category} className="flex items-center justify-between p-3 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl">
+                      <span className="font-medium text-emerald-800 dark:text-emerald-200">{category}</span>
+                      <span className="font-bold text-emerald-600">${amount.toFixed(2)}</span>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-r from-emerald-100 to-teal-100 dark:from-emerald-900/20 dark:to-teal-900/20 flex items-center justify-center mx-auto mb-4">
+                  <ArrowUpCircle className="h-8 w-8 text-emerald-500" />
+                </div>
+                <p className="text-slate-600 dark:text-slate-300">No income recorded this month</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="gradient-card hover:shadow-2xl transition-all duration-300 border-0">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3 text-xl">
+              <div className="p-2 rounded-xl bg-gradient-to-r from-red-500 to-pink-600">
+                <ArrowDownCircle className="h-5 w-5 text-white" />
+              </div>
+              <span className="bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+                Top Expenses
+              </span>
+            </CardTitle>
+            <CardDescription>Your highest spending categories</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {Object.keys(categoryTotals).length > 0 ? (
+              <div className="space-y-3">
+                {Object.entries(categoryTotals)
+                  .sort(([,a], [,b]) => b - a)
+                  .slice(0, 5)
+                  .map(([category, amount]) => (
+                    <div key={category} className="flex items-center justify-between p-3 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 rounded-xl">
+                      <span className="font-medium text-red-800 dark:text-red-200">{category}</span>
+                      <span className="font-bold text-red-600">${amount.toFixed(2)}</span>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-r from-red-100 to-pink-100 dark:from-red-900/20 dark:to-pink-900/20 flex items-center justify-center mx-auto mb-4">
+                  <ArrowDownCircle className="h-8 w-8 text-red-500" />
+                </div>
+                <p className="text-slate-600 dark:text-slate-300">No expenses recorded this month</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Monthly Trends */}
@@ -157,31 +267,31 @@ export function Reports({ expenses }: ReportsProps) {
             <Badge variant="secondary" className="bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700">OpenAI Integration</Badge>
           </CardTitle>
           <CardDescription className="text-base">
-            Get personalized financial advice based on your spending patterns
+            Get personalized financial advice based on your income and spending patterns
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
             <div className="grid gap-4">
-              <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-2 border-blue-200 dark:border-blue-800 rounded-2xl">
-                <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
-                  <Zap className="h-4 w-4" />
-                  💡 Spending Insight
+              <div className="p-6 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 border-2 border-emerald-200 dark:border-emerald-800 rounded-2xl">
+                <h4 className="font-semibold text-emerald-900 dark:text-emerald-100 mb-3 flex items-center gap-2">
+                  <ArrowUpCircle className="h-4 w-4" />
+                  💰 Income Analysis
                 </h4>
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Your food & dining expenses are 32% higher than the average user. 
-                  Consider meal planning to reduce costs.
+                <p className="text-sm text-emerald-800 dark:text-emerald-200">
+                  Your monthly income of ${currentMonthIncome.toFixed(2)} shows {currentMonthIncome > 3000 ? 'strong' : 'moderate'} earning potential. 
+                  Consider diversifying income sources for better financial stability.
                 </p>
               </div>
               
-              <div className="p-6 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 border-2 border-emerald-200 dark:border-emerald-800 rounded-2xl">
-                <h4 className="font-semibold text-emerald-900 dark:text-emerald-100 mb-3 flex items-center gap-2">
-                  <Target className="h-4 w-4" />
-                  🎯 Savings Opportunity
+              <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-2 border-blue-200 dark:border-blue-800 rounded-2xl">
+                <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
+                  <Zap className="h-4 w-4" />
+                  💡 Savings Insight
                 </h4>
-                <p className="text-sm text-emerald-800 dark:text-emerald-200">
-                  Based on your patterns, you could save $150/month by optimizing 
-                  your transportation and entertainment spending.
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  Your savings rate of {savingsRate.toFixed(1)}% is {savingsRate >= 20 ? 'excellent' : savingsRate >= 10 ? 'good' : 'below recommended'}. 
+                  {savingsRate < 20 && ' Aim for 20% to build a strong financial foundation.'}
                 </p>
               </div>
               
@@ -191,8 +301,8 @@ export function Reports({ expenses }: ReportsProps) {
                   📊 Budget Recommendation
                 </h4>
                 <p className="text-sm text-orange-800 dark:text-orange-200">
-                  Set monthly limits: Food ($400), Transportation ($200), 
-                  Entertainment ($150) for better financial control.
+                  Based on your income-to-expense ratio, consider the 50/30/20 rule: 
+                  50% needs (${(currentMonthIncome * 0.5).toFixed(2)}), 30% wants (${(currentMonthIncome * 0.3).toFixed(2)}), 20% savings (${(currentMonthIncome * 0.2).toFixed(2)}).
                 </p>
               </div>
             </div>

@@ -25,6 +25,19 @@ export default function Home() {
     }
   }, [user]);
 
+  // Migrate existing expenses to include type field
+  useEffect(() => {
+    const migratedExpenses = expenses.map(expense => ({
+      ...expense,
+      type: expense.type || 'expense' // Default to 'expense' for existing records
+    }));
+    
+    // Only update if there are expenses without type field
+    if (expenses.some(expense => !expense.type)) {
+      setExpenses(migratedExpenses);
+    }
+  }, [expenses, setExpenses]);
+
   const handleAddExpense = (expense: Omit<Expense, 'id'>) => {
     const newExpense: Expense = {
       ...expense,

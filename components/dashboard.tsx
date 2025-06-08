@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Expense, User, FinancialGoal } from '@/types';
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, Bot, Video, Mic, Sparkles, Target, Zap, Plus, CheckCircle } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, Bot, Video, Mic, Sparkles, Target, Zap, Plus, CheckCircle, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { RecentExpenses } from '@/components/recent-expenses';
 import { ExpenseChart } from '@/components/expense-chart';
 import { AIInsights } from '@/components/ai-insights';
@@ -20,29 +20,51 @@ export function Dashboard({ expenses, user, goals = [] }: DashboardProps) {
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   
-  const currentMonthExpenses = expenses.filter(expense => {
+  const currentMonthTransactions = expenses.filter(expense => {
     const expenseDate = new Date(expense.date);
     return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
   });
 
-  const lastMonthExpenses = expenses.filter(expense => {
+  const lastMonthTransactions = expenses.filter(expense => {
     const expenseDate = new Date(expense.date);
     const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
     const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
     return expenseDate.getMonth() === lastMonth && expenseDate.getFullYear() === lastMonthYear;
   });
 
-  const totalThisMonth = currentMonthExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const totalLastMonth = lastMonthExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const monthlyChange = totalLastMonth > 0 ? ((totalThisMonth - totalLastMonth) / totalLastMonth) * 100 : 0;
+  // Separate income and expenses
+  const currentMonthIncome = currentMonthTransactions
+    .filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + t.amount, 0);
+  
+  const currentMonthExpenses = currentMonthTransactions
+    .filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + t.amount, 0);
 
-  const categoryTotals = currentMonthExpenses.reduce((acc, expense) => {
-    acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
-    return acc;
-  }, {} as Record<string, number>);
+  const lastMonthIncome = lastMonthTransactions
+    .filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + t.amount, 0);
+  
+  const lastMonthExpenses = lastMonthTransactions
+    .filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const netIncome = currentMonthIncome - currentMonthExpenses;
+  const lastMonthNet = lastMonthIncome - lastMonthExpenses;
+  const netChange = lastMonthNet !== 0 ? ((netIncome - lastMonthNet) / Math.abs(lastMonthNet)) * 100 : 0;
+
+  const incomeChange = lastMonthIncome > 0 ? ((currentMonthIncome - lastMonthIncome) / lastMonthIncome) * 100 : 0;
+  const expenseChange = lastMonthExpenses > 0 ? ((currentMonthExpenses - lastMonthExpenses) / lastMonthExpenses) * 100 : 0;
+
+  const categoryTotals = currentMonthTransactions
+    .filter(t => t.type === 'expense')
+    .reduce((acc, expense) => {
+      acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
+      return acc;
+    }, {} as Record<string, number>);
 
   const topCategory = Object.entries(categoryTotals).sort(([,a], [,b]) => b - a)[0];
-  const avgDailySpending = totalThisMonth / new Date().getDate();
+  const savingsRate = currentMonthIncome > 0 ? ((currentMonthIncome - currentMonthExpenses) / currentMonthIncome) * 100 : 0;
 
   // Goal statistics
   const activeGoals = goals.filter(goal => goal.isActive);
@@ -64,7 +86,7 @@ export function Dashboard({ expenses, user, goals = [] }: DashboardProps) {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-4xl font-bold mb-2">Welcome back, {user.name}! 👋</h1>
-              <p className="text-xl text-purple-100 mb-6">Your financial journey continues here</p>
+              <p className="text-xl text-purple-100 mb-6">Your complete financial overview</p>
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2 bg-white/20 rounded-full px-4 py-2">
                   <Target className="h-5 w-5" />
@@ -72,7 +94,7 @@ export function Dashboard({ expenses, user, goals = [] }: DashboardProps) {
                 </div>
                 <div className="flex items-center space-x-2 bg-white/20 rounded-full px-4 py-2">
                   <Zap className="h-5 w-5" />
-                  <span className="font-medium">Streak: 7 days</span>
+                  <span className="font-medium">{savingsRate.toFixed(1)}% Savings Rate</span>
                 </div>
               </div>
             </div>
@@ -89,23 +111,23 @@ export function Dashboard({ expenses, user, goals = [] }: DashboardProps) {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="gradient-card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">This Month</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Monthly Income</CardTitle>
             <div className="p-2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600">
-              <DollarSign className="h-4 w-4 text-white" />
+              <ArrowUpCircle className="h-4 w-4 text-white" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-              ${totalThisMonth.toFixed(2)}
+              ${currentMonthIncome.toFixed(2)}
             </div>
             <div className="flex items-center space-x-1 text-xs mt-2">
-              {monthlyChange >= 0 ? (
-                <TrendingUp className="h-3 w-3 text-red-500" />
+              {incomeChange >= 0 ? (
+                <TrendingUp className="h-3 w-3 text-emerald-500" />
               ) : (
-                <TrendingDown className="h-3 w-3 text-green-500" />
+                <TrendingDown className="h-3 w-3 text-red-500" />
               )}
-              <span className={monthlyChange >= 0 ? 'text-red-500 font-medium' : 'text-green-500 font-medium'}>
-                {Math.abs(monthlyChange).toFixed(1)}% from last month
+              <span className={incomeChange >= 0 ? 'text-emerald-500 font-medium' : 'text-red-500 font-medium'}>
+                {Math.abs(incomeChange).toFixed(1)}% from last month
               </span>
             </div>
           </CardContent>
@@ -113,18 +135,49 @@ export function Dashboard({ expenses, user, goals = [] }: DashboardProps) {
 
         <Card className="gradient-card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Daily Average</CardTitle>
-            <div className="p-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600">
-              <CreditCard className="h-4 w-4 text-white" />
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Monthly Expenses</CardTitle>
+            <div className="p-2 rounded-full bg-gradient-to-r from-red-500 to-pink-600">
+              <ArrowDownCircle className="h-4 w-4 text-white" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              ${avgDailySpending.toFixed(2)}
+            <div className="text-3xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+              ${currentMonthExpenses.toFixed(2)}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-              Based on current month spending
-            </p>
+            <div className="flex items-center space-x-1 text-xs mt-2">
+              {expenseChange >= 0 ? (
+                <TrendingUp className="h-3 w-3 text-red-500" />
+              ) : (
+                <TrendingDown className="h-3 w-3 text-emerald-500" />
+              )}
+              <span className={expenseChange >= 0 ? 'text-red-500 font-medium' : 'text-emerald-500 font-medium'}>
+                {Math.abs(expenseChange).toFixed(1)}% from last month
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="gradient-card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-0">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Net Income</CardTitle>
+            <div className={`p-2 rounded-full bg-gradient-to-r ${netIncome >= 0 ? 'from-emerald-500 to-teal-600' : 'from-red-500 to-pink-600'}`}>
+              <DollarSign className="h-4 w-4 text-white" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-3xl font-bold ${netIncome >= 0 ? 'bg-gradient-to-r from-emerald-600 to-teal-600' : 'bg-gradient-to-r from-red-600 to-pink-600'} bg-clip-text text-transparent`}>
+              ${netIncome.toFixed(2)}
+            </div>
+            <div className="flex items-center space-x-1 text-xs mt-2">
+              {netChange >= 0 ? (
+                <TrendingUp className="h-3 w-3 text-emerald-500" />
+              ) : (
+                <TrendingDown className="h-3 w-3 text-red-500" />
+              )}
+              <span className={netChange >= 0 ? 'text-emerald-500 font-medium' : 'text-red-500 font-medium'}>
+                {Math.abs(netChange).toFixed(1)}% from last month
+              </span>
+            </div>
           </CardContent>
         </Card>
 
@@ -141,23 +194,6 @@ export function Dashboard({ expenses, user, goals = [] }: DashboardProps) {
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
               {completedGoals.length} completed this year
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="gradient-card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Top Category</CardTitle>
-            <div className="p-2 rounded-full bg-gradient-to-r from-orange-500 to-red-600">
-              <TrendingUp className="h-4 w-4 text-white" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-              {topCategory ? topCategory[0] : 'None'}
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-              ${topCategory ? topCategory[1].toFixed(2) : '0.00'} spent
             </p>
           </CardContent>
         </Card>
@@ -293,14 +329,14 @@ export function Dashboard({ expenses, user, goals = [] }: DashboardProps) {
               </span>
             </CardTitle>
             <CardDescription>
-              Add expenses using natural voice commands
+              Add transactions using natural voice commands
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="p-4 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-xl border border-orange-200 dark:border-orange-700">
                 <p className="text-sm text-slate-700 dark:text-slate-300">
-                  💬 "I spent $15 on lunch at McDonald's"
+                  💬 "I earned $500 from freelance work" or "I spent $15 on lunch"
                 </p>
               </div>
               <Button variant="outline" className="w-full group hover:bg-gradient-to-r hover:from-orange-500 hover:to-red-600 hover:text-white transition-all duration-300" disabled>
@@ -315,7 +351,7 @@ export function Dashboard({ expenses, user, goals = [] }: DashboardProps) {
 
       {/* Charts and Recent Activity */}
       <div className="grid gap-6 md:grid-cols-2">
-        <ExpenseChart expenses={currentMonthExpenses} />
+        <ExpenseChart expenses={currentMonthTransactions.filter(t => t.type === 'expense')} />
         <RecentExpenses expenses={expenses.slice(-10)} />
       </div>
     </div>
