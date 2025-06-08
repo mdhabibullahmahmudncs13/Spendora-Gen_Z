@@ -29,12 +29,46 @@ export interface SpendingAnalysis {
   financialScore: number;
 }
 
-export async function analyzeSpendingPatterns(expenses: any[]): Promise<SpendingAnalysis> {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OpenAI API key not configured');
-  }
+function createFallbackAnalysis(expenses: any[], totalSpending: number, topCategories: any[]): SpendingAnalysis {
+  return {
+    insights: [
+      {
+        type: 'tip',
+        title: 'Track Your Progress',
+        message: `You've spent $${totalSpending.toFixed(2)} this month. Consider setting a monthly budget to better manage your finances.`,
+        impact: 'medium',
+        actionable: true
+      },
+      {
+        type: 'opportunity',
+        title: 'Category Analysis',
+        message: topCategories.length > 0 
+          ? `Your top spending category is ${topCategories[0].category} at $${topCategories[0].amount.toFixed(2)}. Look for ways to optimize this area.`
+          : 'Start tracking more expenses to get personalized insights.',
+        impact: 'medium',
+        actionable: true
+      },
+      {
+        type: 'goal',
+        title: 'Build Better Habits',
+        message: 'Continue tracking your expenses regularly to identify patterns and opportunities for improvement.',
+        impact: 'high',
+        actionable: true
+      }
+    ],
+    monthlyBudgetSuggestion: Math.ceil(totalSpending * 1.1),
+    topSpendingCategories: topCategories,
+    savingsOpportunities: topCategories.slice(0, 2).map(cat => ({
+      category: cat.category,
+      potentialSavings: Math.round(cat.amount * 0.1),
+      suggestion: `Consider reducing ${cat.category} expenses by 10% to save $${Math.round(cat.amount * 0.1)} monthly.`
+    })),
+    financialScore: Math.min(85, Math.max(45, 100 - (topCategories.length > 0 ? (topCategories[0].percentage > 50 ? 20 : 10) : 0)))
+  };
+}
 
-  // Calculate spending statistics
+export async function analyzeSpendingPatterns(expenses: any[]): Promise<SpendingAnalysis> {
+  // Calculate spending statistics first
   const totalSpending = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   const categoryTotals = expenses.reduce((acc, exp) => {
     acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
@@ -49,6 +83,11 @@ export async function analyzeSpendingPatterns(expenses: any[]): Promise<Spending
     }))
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5);
+
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn('OpenAI API key not configured, using fallback analysis');
+    return createFallbackAnalysis(expenses, totalSpending, topCategories);
+  }
 
   // Create context for OpenAI
   const expenseContext = `
@@ -126,40 +165,47 @@ Focus on:
   } catch (error) {
     console.error('OpenAI API Error:', error);
     
-    // Fallback analysis if OpenAI fails
-    return {
-      insights: [
-        {
-          type: 'tip',
-          title: 'Track Your Progress',
-          message: `You've spent $${totalSpending.toFixed(2)} this month. Consider setting a monthly budget to better manage your finances.`,
-          impact: 'medium',
-          actionable: true
-        },
-        {
-          type: 'opportunity',
-          title: 'Category Analysis',
-          message: topCategories.length > 0 
-            ? `Your top spending category is ${topCategories[0].category} at $${topCategories[0].amount.toFixed(2)}. Look for ways to optimize this area.`
-            : 'Start tracking more expenses to get personalized insights.',
-          impact: 'medium',
-          actionable: true
-        }
-      ],
-      monthlyBudgetSuggestion: Math.ceil(totalSpending * 1.1),
-      topSpendingCategories: topCategories,
-      savingsOpportunities: [],
-      financialScore: 75
-    };
+    // Check if it's a rate limit error and provide specific feedback
+    if (error instanceof Error && error.message.includes('429')) {
+      console.warn('OpenAI API rate limit exceeded, using enhanced fallback analysis');
+    } else if (error instanceof Error && error.message.includes('quota')) {
+      console.warn('OpenAI API quota exceeded, using enhanced fallback analysis');
+    }
+    
+    // Return enhanced fallback analysis
+    return createFallbackAnalysis(expenses, totalSpending, topCategories);
   }
 }
 
 export async function generatePersonalizedTip(expenses: any[], userGoal?: string): Promise<string> {
   if (!process.env.OPENAI_API_KEY) {
-    return "Connect your OpenAI API key to get personalized financial tips!";
+    return "Connect your OpenAI API key to get personalized financial tips! In the meantime, keep tracking your expenses to build better financial habits.";
   }
 
   const recentExpenses = expenses.slice(-5);
+  const totalRecent = recentExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+  
+  // Create a fallback tip based on recent spending patterns
+  const fallbackTip = () => {
+    if (recentExpenses.length === 0) {
+      return "Start tracking your daily expenses to gain insights into your spending habits and identify opportunities to save money.";
+    }
+    
+    const avgExpense = totalRecent / recentExpenses.length;
+    const topCategory = recentExpenses.reduce((acc, exp) => {
+      acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    const mainCategory = Object.entries(topCategory).sort(([,a], [,b]) => b - a)[0]?.[0];
+    
+    if (avgExpense > 50) {
+      return `Your recent average expense is $${avgExpense.toFixed(2)}. Consider setting daily spending limits to help control larger purchases, especially in ${mainCategory || 'your main spending categories'}.`;
+    } else {
+      return `Great job keeping your recent expenses moderate! Your average is $${avgExpense.toFixed(2)}. ${userGoal ? `To reach your goal of ${userGoal}, ` : ''}consider setting aside any extra money into savings.`;
+    }
+  };
+  
   const context = `Recent expenses: ${recentExpenses.map(exp => `$${exp.amount} on ${exp.category}`).join(', ')}`;
   
   try {
@@ -179,9 +225,15 @@ export async function generatePersonalizedTip(expenses: any[], userGoal?: string
       max_tokens: 150,
     });
 
-    return completion.choices[0]?.message?.content || "Keep tracking your expenses to build better financial habits!";
+    return completion.choices[0]?.message?.content || fallbackTip();
   } catch (error) {
     console.error('OpenAI API Error:', error);
-    return "Keep tracking your expenses to build better financial habits!";
+    
+    // Check if it's a rate limit or quota error
+    if (error instanceof Error && (error.message.includes('429') || error.message.includes('quota'))) {
+      console.warn('OpenAI API limit exceeded, using smart fallback tip');
+    }
+    
+    return fallbackTip();
   }
 }
