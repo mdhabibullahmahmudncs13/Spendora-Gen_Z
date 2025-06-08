@@ -9,7 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Expense, EXPENSE_CATEGORIES, INCOME_CATEGORIES, TRANSACTION_TYPES } from '@/types';
-import { PlusCircle, Trash2, Calendar, DollarSign, Mic, Sparkles, Zap, TrendingUp, TrendingDown } from 'lucide-react';
+import { PlusCircle, Trash2, Calendar, DollarSign, Sparkles, TrendingUp, TrendingDown } from 'lucide-react';
+import { VoiceInputCard } from '@/components/voice-input-card';
 import { toast } from 'sonner';
 
 interface ExpenseFormProps {
@@ -67,6 +68,19 @@ export function ExpenseForm({ onAddExpense, expenses, onDeleteExpense }: Expense
     toast.success(`${type === 'income' ? 'Income' : 'Expense'} added successfully! 🎉`);
   };
 
+  const handleVoiceTransaction = (voiceTransaction: any) => {
+    const transaction: Omit<Expense, 'id'> = {
+      amount: voiceTransaction.amount,
+      category: voiceTransaction.category,
+      description: voiceTransaction.description,
+      date: voiceTransaction.date,
+      type: voiceTransaction.type,
+      createdAt: new Date().toISOString(),
+    };
+
+    onAddExpense(transaction);
+  };
+
   const recentTransactions = expenses.slice(-5).reverse();
 
   return (
@@ -79,7 +93,7 @@ export function ExpenseForm({ onAddExpense, expenses, onDeleteExpense }: Expense
         </div>
         <div className="relative z-10">
           <h1 className="text-4xl font-bold mb-2">Track Your Finances 💰</h1>
-          <p className="text-xl text-blue-100">Record both income and expenses with smart categorization</p>
+          <p className="text-xl text-blue-100">Record both income and expenses with smart categorization and voice input</p>
         </div>
       </div>
 
@@ -201,85 +215,16 @@ export function ExpenseForm({ onAddExpense, expenses, onDeleteExpense }: Expense
                 />
               </div>
               
-              <div className="flex gap-3">
-                <Button type="submit" className={`flex-1 h-12 bg-gradient-to-r ${getTransactionColor(type)} hover:from-${type === 'income' ? 'emerald' : 'red'}-600 hover:to-${type === 'income' ? 'teal' : 'pink'}-700 text-white font-semibold transition-all duration-300 transform hover:scale-105`}>
-                  <PlusCircle className="h-5 w-5 mr-2" />
-                  Add {type === 'income' ? 'Income' : 'Expense'}
-                </Button>
-                <Button type="button" variant="outline" className="h-12 px-6 border-2 border-orange-300 hover:bg-gradient-to-r hover:from-orange-500 hover:to-red-600 hover:text-white hover:border-transparent transition-all duration-300" disabled>
-                  <Mic className="h-5 w-5" />
-                </Button>
-              </div>
+              <Button type="submit" className={`w-full h-12 bg-gradient-to-r ${getTransactionColor(type)} hover:from-${type === 'income' ? 'emerald' : 'red'}-600 hover:to-${type === 'income' ? 'teal' : 'pink'}-700 text-white font-semibold transition-all duration-300 transform hover:scale-105`}>
+                <PlusCircle className="h-5 w-5 mr-2" />
+                Add {type === 'income' ? 'Income' : 'Expense'}
+              </Button>
             </form>
           </CardContent>
         </Card>
 
         {/* Voice Input Feature */}
-        <Card className="gradient-card border-2 border-dashed border-orange-300 dark:border-orange-600 hover:border-orange-500 transition-all duration-300 hover:shadow-2xl transform hover:-translate-y-1">
-          <CardHeader className="pb-6">
-            <CardTitle className="flex items-center gap-3 text-2xl">
-              <div className="p-3 rounded-2xl bg-gradient-to-r from-orange-500 to-red-600">
-                <Mic className="h-6 w-6 text-white" />
-              </div>
-              <span className="bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-                Voice Input
-              </span>
-              <Badge variant="secondary" className="bg-gradient-to-r from-orange-100 to-red-100 text-orange-700 border-orange-200">
-                Coming Soon
-              </Badge>
-            </CardTitle>
-            <CardDescription className="text-base">
-              Add transactions using natural voice commands with ElevenLabs integration
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div className="p-6 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-2xl border-2 border-dashed border-orange-200 dark:border-orange-700">
-                <h4 className="font-semibold mb-4 text-orange-800 dark:text-orange-200 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" />
-                  Example Commands:
-                </h4>
-                <ul className="space-y-3 text-sm text-orange-700 dark:text-orange-300">
-                  <li className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                    "I spent $15 on lunch at McDonald's"
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                    "I earned $500 from freelance work"
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                    "Add $120 for gas on Monday"
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                    "Record $2000 salary payment"
-                  </li>
-                </ul>
-              </div>
-              
-              <div className="relative">
-                <Button variant="outline" className="w-full h-16 border-2 border-orange-300 hover:bg-gradient-to-r hover:from-orange-500 hover:to-red-600 hover:text-white hover:border-transparent transition-all duration-300 group" disabled>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-gradient-to-r from-orange-500 to-red-600 group-hover:bg-white/20">
-                      <Mic className="h-5 w-5 text-white group-hover:text-white" />
-                    </div>
-                    <span className="font-semibold">Start Voice Recording</span>
-                  </div>
-                </Button>
-                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-orange-500/10 to-red-500/10 animate-pulse"></div>
-              </div>
-              
-              <div className="text-center">
-                <Badge variant="outline" className="bg-gradient-to-r from-orange-100 to-red-100 text-orange-700 border-orange-200 px-4 py-2">
-                  <Zap className="h-3 w-3 mr-1" />
-                  ElevenLabs API Integration
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <VoiceInputCard onTransactionParsed={handleVoiceTransaction} />
       </div>
 
       {/* Recent Transactions */}
