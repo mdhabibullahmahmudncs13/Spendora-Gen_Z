@@ -42,30 +42,11 @@ export function AIInsights({ expenses }: AIInsightsProps) {
   const [loading, setLoading] = useState(false);
   const [personalizedTip, setPersonalizedTip] = useState<string>('');
   const [tipLoading, setTipLoading] = useState(false);
-  const [hasApiKey, setHasApiKey] = useState(false);
 
   // Check if we have expenses to analyze
   const hasExpenses = expenses.length > 0;
   const expenseTransactions = expenses.filter(exp => exp.type === 'expense');
   const hasExpenseData = expenseTransactions.length > 0;
-
-  useEffect(() => {
-    // Check if API key is configured by making a test call
-    const checkApiKey = async () => {
-      try {
-        const response = await fetch('/api/financial-tip', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ expenses: [] }),
-        });
-        setHasApiKey(response.ok);
-      } catch (error) {
-        setHasApiKey(false);
-      }
-    };
-    
-    checkApiKey();
-  }, []);
 
   const getInsightIcon = (type: string) => {
     switch (type) {
@@ -162,10 +143,10 @@ export function AIInsights({ expenses }: AIInsightsProps) {
 
   // Auto-generate tip when component mounts and has expenses
   useEffect(() => {
-    if (hasExpenses && !personalizedTip && hasApiKey) {
+    if (hasExpenses && !personalizedTip) {
       generateTip();
     }
-  }, [hasExpenses, hasApiKey]);
+  }, [hasExpenses]);
 
   return (
     <div className="space-y-6">
@@ -179,11 +160,6 @@ export function AIInsights({ expenses }: AIInsightsProps) {
             <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
               AI Financial Tips
             </span>
-            {!hasApiKey && (
-              <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-200">
-                API Key Needed
-              </Badge>
-            )}
           </CardTitle>
           <CardDescription>
             Get personalized insights based on your spending patterns
@@ -203,16 +179,6 @@ export function AIInsights({ expenses }: AIInsightsProps) {
                   Add some expenses to get personalized AI tips!
                 </p>
               </div>
-            ) : !hasApiKey ? (
-              <div className="p-4 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-xl border border-orange-200 dark:border-orange-700">
-                <div className="flex items-center gap-2 mb-2">
-                  <Brain className="h-4 w-4 text-orange-600" />
-                  <span className="text-sm font-semibold text-orange-800 dark:text-orange-200">OpenAI API Key Required</span>
-                </div>
-                <p className="text-sm text-orange-700 dark:text-orange-300">
-                  Configure your OpenAI API key in the .env.local file to enable AI-powered financial insights and personalized tips.
-                </p>
-              </div>
             ) : (
               <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-700">
                 <p className="text-sm text-blue-700 dark:text-blue-300">
@@ -224,7 +190,7 @@ export function AIInsights({ expenses }: AIInsightsProps) {
             <div className="flex gap-2">
               <Button 
                 onClick={generateTip} 
-                disabled={tipLoading || !hasExpenses || !hasApiKey}
+                disabled={tipLoading || !hasExpenses}
                 variant="outline" 
                 className="flex-1 group hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-600 hover:text-white transition-all duration-300"
               >
@@ -238,7 +204,7 @@ export function AIInsights({ expenses }: AIInsightsProps) {
               
               <Button 
                 onClick={analyzeSpending} 
-                disabled={loading || !hasExpenseData || !hasApiKey}
+                disabled={loading || !hasExpenseData}
                 variant="outline" 
                 className="group hover:bg-gradient-to-r hover:from-emerald-500 hover:to-teal-600 hover:text-white transition-all duration-300"
               >
@@ -249,14 +215,6 @@ export function AIInsights({ expenses }: AIInsightsProps) {
                 )}
               </Button>
             </div>
-
-            {!hasApiKey && (
-              <div className="text-center pt-2">
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Using fallback analysis. Add your OpenAI API key for enhanced AI insights.
-                </p>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
