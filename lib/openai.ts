@@ -1,14 +1,10 @@
-'use client';
+import OpenAI from 'openai';
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Expense } from '@/types';
-import { Bot, Sparkles, TrendingUp, Target, AlertTriangle, Lightbulb, Loader2, RefreshCw, Zap, Brain } from 'lucide-react';
-import { toast } from 'sonner';
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-interface FinancialInsight {
+export interface FinancialInsight {
   type: 'tip' | 'warning' | 'opportunity' | 'goal';
   title: string;
   message: string;
@@ -17,7 +13,7 @@ interface FinancialInsight {
   actionable: boolean;
 }
 
-interface SpendingAnalysis {
+export interface SpendingAnalysis {
   insights: FinancialInsight[];
   monthlyBudgetSuggestion: number;
   topSpendingCategories: Array<{
@@ -33,328 +29,280 @@ interface SpendingAnalysis {
   financialScore: number;
 }
 
-interface AIInsightsProps {
-  expenses: Expense[];
+function createFallbackAnalysis(expenses: any[], totalSpending: number, topCategories: any[]): SpendingAnalysis {
+  const insights: FinancialInsight[] = [];
+  
+  if (expenses.length === 0) {
+    insights.push({
+      type: 'tip',
+      title: 'Start Your Financial Journey',
+      message: 'Begin by tracking your daily expenses to understand your spending patterns and identify opportunities for improvement.',
+      impact: 'high',
+      actionable: true
+    });
+  } else {
+    // Spending analysis
+    if (totalSpending > 0) {
+      insights.push({
+        type: 'tip',
+        title: 'Monthly Spending Overview',
+        message: `You've spent $${totalSpending.toFixed(2)} this month. ${totalSpending > 2000 ? 'Consider reviewing your expenses to identify potential savings.' : 'Your spending appears to be under control.'}`,
+        impact: totalSpending > 2000 ? 'medium' : 'low',
+        actionable: true
+      });
+    }
+
+    // Category analysis
+    if (topCategories.length > 0) {
+      const topCategory = topCategories[0];
+      if (topCategory.percentage > 40) {
+        insights.push({
+          type: 'warning',
+          title: 'High Category Concentration',
+          message: `${topCategory.category} represents ${topCategory.percentage.toFixed(1)}% of your spending ($${topCategory.amount.toFixed(2)}). Consider diversifying your expenses or finding ways to reduce costs in this area.`,
+          category: topCategory.category,
+          impact: 'high',
+          actionable: true
+        });
+      } else {
+        insights.push({
+          type: 'opportunity',
+          title: 'Balanced Spending',
+          message: `Your top category (${topCategory.category}) represents ${topCategory.percentage.toFixed(1)}% of spending. This shows good expense diversification.`,
+          category: topCategory.category,
+          impact: 'low',
+          actionable: false
+        });
+      }
+    }
+
+    // Savings opportunity
+    if (topCategories.length > 1) {
+      const secondCategory = topCategories[1];
+      insights.push({
+        type: 'opportunity',
+        title: 'Savings Opportunity',
+        message: `By reducing ${secondCategory.category} expenses by 15%, you could save $${(secondCategory.amount * 0.15).toFixed(2)} monthly.`,
+        category: secondCategory.category,
+        impact: 'medium',
+        actionable: true
+      });
+    }
+
+    // Goal setting
+    insights.push({
+      type: 'goal',
+      title: 'Set Financial Goals',
+      message: 'Consider setting monthly budget goals for your top spending categories to better control your finances.',
+      impact: 'medium',
+      actionable: true
+    });
+  }
+
+  return {
+    insights,
+    monthlyBudgetSuggestion: Math.max(totalSpending * 1.1, 500),
+    topSpendingCategories: topCategories,
+    savingsOpportunities: topCategories.slice(0, 3).map(cat => ({
+      category: cat.category,
+      potentialSavings: Math.round(cat.amount * 0.1),
+      suggestion: `Reduce ${cat.category} spending by 10% to save $${Math.round(cat.amount * 0.1)} monthly.`
+    })),
+    financialScore: Math.min(85, Math.max(45, 100 - (topCategories.length > 0 ? (topCategories[0].percentage > 50 ? 25 : 10) : 0)))
+  };
 }
 
-export function AIInsights({ expenses }: AIInsightsProps) {
-  const [analysis, setAnalysis] = useState<SpendingAnalysis | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [personalizedTip, setPersonalizedTip] = useState<string>('');
-  const [tipLoading, setTipLoading] = useState(false);
-  const [hasApiKey, setHasApiKey] = useState(false);
+export async function analyzeSpendingPatterns(expenses: any[]): Promise<SpendingAnalysis> {
+  // Calculate spending statistics first
+  const totalSpending = expenses.filter(exp => exp.type === 'expense').reduce((sum, exp) => sum + exp.amount, 0);
+  const categoryTotals = expenses
+    .filter(exp => exp.type === 'expense')
+    .reduce((acc, exp) => {
+      acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
+      return acc;
+    }, {} as Record<string, number>);
 
-  // Check if we have expenses to analyze
-  const hasExpenses = expenses.length > 0;
-  const expenseTransactions = expenses.filter(exp => exp.type === 'expense');
-  const hasExpenseData = expenseTransactions.length > 0;
+  const topCategories = Object.entries(categoryTotals)
+    .map(([category, amount]) => ({
+      category,
+      amount,
+      percentage: totalSpending > 0 ? (amount / totalSpending) * 100 : 0
+    }))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 5);
 
-  useEffect(() => {
-    // Check if API key is configured by making a test call
-    const checkApiKey = async () => {
-      try {
-        const response = await fetch('/api/financial-tip', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ expenses: [] }),
-        });
-        setHasApiKey(response.ok);
-      } catch (error) {
-        setHasApiKey(false);
-      }
-    };
+  if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'your_openai_api_key_here') {
+    console.warn('OpenAI API key not configured, using enhanced fallback analysis');
+    return createFallbackAnalysis(expenses, totalSpending, topCategories);
+  }
+
+  // Create context for OpenAI
+  const expenseContext = `
+User's spending data for analysis:
+- Total monthly spending: $${totalSpending.toFixed(2)}
+- Number of expense transactions: ${expenses.filter(exp => exp.type === 'expense').length}
+- Number of income transactions: ${expenses.filter(exp => exp.type === 'income').length}
+- Top spending categories: ${topCategories.map(cat => `${cat.category}: $${cat.amount.toFixed(2)} (${cat.percentage.toFixed(1)}%)`).join(', ')}
+- Recent transactions: ${expenses.slice(-10).map(exp => `${exp.type === 'income' ? '+' : '-'}$${exp.amount} on ${exp.category} - ${exp.description}`).join('; ')}
+
+Please analyze this spending pattern and provide actionable financial insights.
+`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `You are a professional financial advisor AI. Analyze user spending patterns and provide actionable, personalized financial advice. 
+
+Return your response as a JSON object with this exact structure:
+{
+  "insights": [
+    {
+      "type": "tip|warning|opportunity|goal",
+      "title": "Brief title (max 50 chars)",
+      "message": "Detailed advice message (max 200 chars)",
+      "category": "relevant spending category if applicable",
+      "impact": "low|medium|high",
+      "actionable": true|false
+    }
+  ],
+  "monthlyBudgetSuggestion": number,
+  "savingsOpportunities": [
+    {
+      "category": "category name",
+      "potentialSavings": number,
+      "suggestion": "specific actionable suggestion (max 150 chars)"
+    }
+  ],
+  "financialScore": number (1-100)
+}
+
+Focus on:
+- Practical, actionable advice
+- Specific dollar amounts when possible
+- Realistic budget suggestions based on current spending
+- Positive reinforcement for good habits
+- Clear next steps for improvement
+- Keep messages concise and encouraging`
+        },
+        {
+          role: "user",
+          content: expenseContext
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 1500,
+    });
+
+    const response = completion.choices[0]?.message?.content;
+    if (!response) {
+      throw new Error('No response from OpenAI');
+    }
+
+    const analysis = JSON.parse(response) as SpendingAnalysis;
     
-    checkApiKey();
-  }, []);
-
-  const getInsightIcon = (type: string) => {
-    switch (type) {
-      case 'tip': return <Lightbulb className="h-4 w-4" />;
-      case 'warning': return <AlertTriangle className="h-4 w-4" />;
-      case 'opportunity': return <TrendingUp className="h-4 w-4" />;
-      case 'goal': return <Target className="h-4 w-4" />;
-      default: return <Sparkles className="h-4 w-4" />;
+    // Add top categories to the response
+    analysis.topSpendingCategories = topCategories;
+    
+    // Validate and sanitize the response
+    if (!analysis.insights || !Array.isArray(analysis.insights)) {
+      throw new Error('Invalid insights format');
     }
-  };
-
-  const getInsightColor = (type: string, impact: string) => {
-    const baseColors = {
-      tip: 'from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800',
-      warning: 'from-red-50 to-pink-50 dark:from-red-950/20 dark:to-pink-950/20 border-red-200 dark:border-red-800',
-      opportunity: 'from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 border-emerald-200 dark:border-emerald-800',
-      goal: 'from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-purple-200 dark:border-purple-800'
-    };
-    return baseColors[type as keyof typeof baseColors] || baseColors.tip;
-  };
-
-  const getImpactBadge = (impact: string) => {
-    const colors = {
-      low: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-      medium: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300',
-      high: 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300'
-    };
-    return colors[impact as keyof typeof colors] || colors.medium;
-  };
-
-  const analyzeSpending = async () => {
-    if (!hasExpenseData) {
-      toast.error('Add some expense transactions first to get AI insights!');
-      return;
+    
+    if (typeof analysis.financialScore !== 'number' || analysis.financialScore < 1 || analysis.financialScore > 100) {
+      analysis.financialScore = 75; // Default score
     }
+    
+    return analysis;
+  } catch (error) {
+    console.error('OpenAI API Error:', error);
+    
+    // Check if it's a rate limit error and provide specific feedback
+    if (error instanceof Error && error.message.includes('429')) {
+      console.warn('OpenAI API rate limit exceeded, using enhanced fallback analysis');
+    } else if (error instanceof Error && error.message.includes('quota')) {
+      console.warn('OpenAI API quota exceeded, using enhanced fallback analysis');
+    } else if (error instanceof Error && error.message.includes('401')) {
+      console.warn('OpenAI API authentication failed, check your API key');
+    }
+    
+    // Return enhanced fallback analysis
+    return createFallbackAnalysis(expenses, totalSpending, topCategories);
+  }
+}
 
-    setLoading(true);
-    try {
-      const response = await fetch('/api/analyze-spending', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+export async function generatePersonalizedTip(expenses: any[], userGoal?: string): Promise<string> {
+  if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'your_openai_api_key_here') {
+    return generateFallbackTip(expenses, userGoal);
+  }
+
+  const recentExpenses = expenses.slice(-10);
+  const totalRecent = recentExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+  
+  if (recentExpenses.length === 0) {
+    return "Start tracking your daily expenses to gain insights into your spending habits and identify opportunities to save money. Even small purchases add up over time!";
+  }
+  
+  const context = `Recent transactions: ${recentExpenses.map(exp => `${exp.type === 'income' ? '+' : '-'}$${exp.amount} on ${exp.category} - ${exp.description}`).join(', ')}`;
+  
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: "You are a helpful financial advisor. Provide a brief, actionable financial tip based on the user's recent spending. Keep it under 150 words, make it encouraging and specific. Focus on practical advice they can implement immediately."
         },
-        body: JSON.stringify({ expenses }),
-      });
+        {
+          role: "user",
+          content: `${context}${userGoal ? ` User goal: ${userGoal}` : ''}`
+        }
+      ],
+      temperature: 0.8,
+      max_tokens: 200,
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.details || 'Failed to analyze spending');
-      }
+    const tip = completion.choices[0]?.message?.content;
+    return tip || generateFallbackTip(expenses, userGoal);
+  } catch (error) {
+    console.error('OpenAI API Error for tip generation:', error);
+    return generateFallbackTip(expenses, userGoal);
+  }
+}
 
-      const data = await response.json();
-      setAnalysis(data);
-      toast.success('AI analysis complete! 🎉');
-    } catch (error) {
-      console.error('Analysis error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to analyze spending patterns');
-    } finally {
-      setLoading(false);
+function generateFallbackTip(expenses: any[], userGoal?: string): string {
+  const recentExpenses = expenses.slice(-5);
+  const totalRecent = recentExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+  
+  if (recentExpenses.length === 0) {
+    return "Start tracking your daily expenses to gain insights into your spending habits. Even tracking small purchases like coffee or snacks can reveal surprising patterns!";
+  }
+  
+  const avgExpense = totalRecent / recentExpenses.length;
+  const expenseCategories = recentExpenses.reduce((acc, exp) => {
+    if (exp.type === 'expense') {
+      acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
     }
-  };
-
-  const generateTip = async () => {
-    if (!hasExpenses) {
-      toast.error('Add some transactions first to get personalized tips!');
-      return;
-    }
-
-    setTipLoading(true);
-    try {
-      const response = await fetch('/api/financial-tip', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ expenses }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.details || 'Failed to generate tip');
-      }
-
-      const data = await response.json();
-      setPersonalizedTip(data.tip);
-      toast.success('New tip generated! 💡');
-    } catch (error) {
-      console.error('Tip generation error:', error);
-      toast.error('Failed to generate personalized tip');
-    } finally {
-      setTipLoading(false);
-    }
-  };
-
-  // Auto-generate tip when component mounts and has expenses
-  useEffect(() => {
-    if (hasExpenses && !personalizedTip && hasApiKey) {
-      generateTip();
-    }
-  }, [hasExpenses, hasApiKey]);
-
-  return (
-    <div className="space-y-6">
-      {/* Quick Tip Card */}
-      <Card className="gradient-card border-2 border-dashed border-purple-300 dark:border-purple-600 hover:border-purple-500 transition-all duration-300 hover:shadow-2xl transform hover:-translate-y-1">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <div className="p-2 rounded-full bg-gradient-to-r from-purple-500 to-blue-600">
-              <Bot className="h-5 w-5 text-white" />
-            </div>
-            <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-              AI Financial Tips
-            </span>
-            {!hasApiKey && (
-              <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-200">
-                API Key Needed
-              </Badge>
-            )}
-          </CardTitle>
-          <CardDescription>
-            Get personalized insights based on your spending patterns
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {personalizedTip ? (
-              <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-xl border border-purple-200 dark:border-purple-700">
-                <p className="text-sm text-slate-700 dark:text-slate-300">
-                  💡 {personalizedTip}
-                </p>
-              </div>
-            ) : !hasExpenses ? (
-              <div className="p-4 bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-900/20 dark:to-blue-900/20 rounded-xl border border-slate-200 dark:border-slate-700">
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Add some expenses to get personalized AI tips!
-                </p>
-              </div>
-            ) : !hasApiKey ? (
-              <div className="p-4 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-xl border border-orange-200 dark:border-orange-700">
-                <div className="flex items-center gap-2 mb-2">
-                  <Brain className="h-4 w-4 text-orange-600" />
-                  <span className="text-sm font-semibold text-orange-800 dark:text-orange-200">OpenAI API Key Required</span>
-                </div>
-                <p className="text-sm text-orange-700 dark:text-orange-300">
-                  Configure your OpenAI API key in the .env.local file to enable AI-powered financial insights and personalized tips.
-                </p>
-              </div>
-            ) : (
-              <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-700">
-                <p className="text-sm text-blue-700 dark:text-blue-300">
-                  🤖 AI is analyzing your transactions to generate personalized tips...
-                </p>
-              </div>
-            )}
-            
-            <div className="flex gap-2">
-              <Button 
-                onClick={generateTip} 
-                disabled={tipLoading || !hasExpenses || !hasApiKey}
-                variant="outline" 
-                className="flex-1 group hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-600 hover:text-white transition-all duration-300"
-              >
-                {tipLoading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Sparkles className="h-4 w-4 mr-2 group-hover:animate-spin" />
-                )}
-                {tipLoading ? 'Generating...' : 'Get New Tip'}
-              </Button>
-              
-              <Button 
-                onClick={analyzeSpending} 
-                disabled={loading || !hasExpenseData || !hasApiKey}
-                variant="outline" 
-                className="group hover:bg-gradient-to-r hover:from-emerald-500 hover:to-teal-600 hover:text-white transition-all duration-300"
-              >
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4 group-hover:animate-spin" />
-                )}
-              </Button>
-            </div>
-
-            {!hasApiKey && (
-              <div className="text-center pt-2">
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Using fallback analysis. Add your OpenAI API key for enhanced AI insights.
-                </p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Detailed Analysis */}
-      {analysis && (
-        <Card className="gradient-card hover:shadow-2xl transition-all duration-300 border-0">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3 text-2xl">
-              <div className="p-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600">
-                <Bot className="h-6 w-6 text-white" />
-              </div>
-              <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                AI Spending Analysis
-              </span>
-              <Badge variant="secondary" className="bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700">
-                Financial Score: {analysis.financialScore}/100
-              </Badge>
-            </CardTitle>
-            <CardDescription className="text-base">
-              Comprehensive analysis of your spending patterns
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {/* Insights */}
-              <div className="grid gap-4">
-                {analysis.insights.map((insight, index) => (
-                  <div
-                    key={index}
-                    className={`p-6 bg-gradient-to-r ${getInsightColor(insight.type, insight.impact)} border-2 rounded-2xl`}
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <h4 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                        {getInsightIcon(insight.type)}
-                        {insight.title}
-                      </h4>
-                      <Badge variant="outline" className={getImpactBadge(insight.impact)}>
-                        {insight.impact} impact
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-slate-800 dark:text-slate-200">
-                      {insight.message}
-                    </p>
-                    {insight.category && (
-                      <Badge variant="secondary" className="mt-2">
-                        {insight.category}
-                      </Badge>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Budget Suggestion */}
-              <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-2 border-blue-200 dark:border-blue-800 rounded-2xl">
-                <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
-                  <Target className="h-4 w-4" />
-                  💰 Recommended Monthly Budget
-                </h4>
-                <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">
-                  ${analysis.monthlyBudgetSuggestion.toFixed(2)}
-                </p>
-                <p className="text-sm text-blue-700 dark:text-blue-300 mt-2">
-                  Based on your spending patterns and financial goals
-                </p>
-              </div>
-
-              {/* Savings Opportunities */}
-              {analysis.savingsOpportunities.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-lg text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-emerald-500" />
-                    Savings Opportunities
-                  </h4>
-                  {analysis.savingsOpportunities.map((opportunity, index) => (
-                    <div
-                      key={index}
-                      className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-emerald-800 dark:text-emerald-200">
-                          {opportunity.category}
-                        </span>
-                        <Badge className="bg-emerald-100 text-emerald-700">
-                          Save ${opportunity.potentialSavings.toFixed(2)}/month
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-emerald-700 dark:text-emerald-300">
-                        {opportunity.suggestion}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+    return acc;
+  }, {} as Record<string, number>);
+  
+  const topCategory = Object.entries(expenseCategories).sort(([,a], [,b]) => b - a)[0]?.[0];
+  
+  const tips = [
+    `Your recent average expense is $${avgExpense.toFixed(2)}. Try the 24-hour rule: wait a day before making non-essential purchases over $50.`,
+    `You've been spending on ${topCategory || 'various categories'}. Consider setting a weekly budget for discretionary spending to stay on track.`,
+    `Track your expenses for 30 days to identify patterns. You might be surprised where your money goes!`,
+    `Try the envelope method: allocate cash for different spending categories each week.`,
+    `Before buying something, ask yourself: "Do I need this, or do I just want it?" This simple question can save you hundreds monthly.`
+  ];
+  
+  const randomTip = tips[Math.floor(Math.random() * tips.length)];
+  
+  if (userGoal) {
+    return `${randomTip} Remember your goal: ${userGoal}. Every dollar saved brings you closer!`;
+  }
+  
+  return randomTip;
 }
