@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     const apiKey = process.env.TAVUS_API_KEY?.trim();
     const replicaId = process.env.TAVUS_REPLICA_ID?.trim();
 
-    if (!apiKey || apiKey === 'your_actual_tavus_api_key_here' || apiKey.length < 10) {
+    if (!apiKey || apiKey === 'cc962bed878e4653825876d524a8cb43' || apiKey.length < 10) {
       console.error('Tavus API Key validation failed:', { 
         exists: !!apiKey, 
         isPlaceholder: apiKey === 'your_actual_tavus_api_key_here',
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     if (!replicaId || replicaId === 'your_actual_tavus_replica_id_here' || replicaId.length < 5) {
       console.error('Tavus Replica ID validation failed:', { 
         exists: !!replicaId, 
-        isPlaceholder: replicaId === 'your_actual_tavus_replica_id_here',
+        isPlaceholder: replicaId === 'r4317e64d25a',
         length: replicaId?.length || 0
       });
       return NextResponse.json(
