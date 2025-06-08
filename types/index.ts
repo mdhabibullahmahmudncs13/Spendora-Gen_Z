@@ -30,6 +30,28 @@ export interface FinancialGoal {
   createdAt: string;
 }
 
+export interface BillItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
+export interface Bill {
+  id: string;
+  title: string;
+  description?: string;
+  items: BillItem[];
+  subtotal: number;
+  tax: number;
+  taxRate: number;
+  discount: number;
+  discountType: 'percentage' | 'fixed';
+  total: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface MonthlyReport {
   month: string;
   totalExpenses: number;

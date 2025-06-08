@@ -6,17 +6,19 @@ import { ExpenseForm } from '@/components/expense-form';
 import { Reports } from '@/components/reports';
 import { Settings } from '@/components/settings';
 import { GoalsDashboard } from '@/components/goals-dashboard';
+import { BillCalculator } from '@/components/bill-calculator';
 import { Sidebar } from '@/components/sidebar';
 import { Header } from '@/components/header';
 import { AuthModal } from '@/components/auth-modal';
 import { useLocalStorage } from '@/hooks/use-local-storage';
-import { Expense, User, FinancialGoal } from '@/types';
+import { Expense, User, FinancialGoal, Bill } from '@/types';
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [user, setUser] = useLocalStorage<User | null>('financeai_user', null);
   const [expenses, setExpenses] = useLocalStorage<Expense[]>('financeai_expenses', []);
   const [goals, setGoals] = useLocalStorage<FinancialGoal[]>('financeai_goals', []);
+  const [bills, setBills] = useLocalStorage<Bill[]>('financeai_bills', []);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
@@ -71,6 +73,28 @@ export default function Home() {
     setGoals(goals.filter(goal => goal.id !== id));
   };
 
+  const handleSaveBill = (billData: Omit<Bill, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newBill: Bill = {
+      ...billData,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setBills([...bills, newBill]);
+  };
+
+  const handleUpdateBill = (id: string, billData: Omit<Bill, 'id' | 'createdAt' | 'updatedAt'>) => {
+    setBills(bills.map(bill => 
+      bill.id === id 
+        ? { ...billData, id, createdAt: bill.createdAt, updatedAt: new Date().toISOString() }
+        : bill
+    ));
+  };
+
+  const handleDeleteBill = (id: string) => {
+    setBills(bills.filter(bill => bill.id !== id));
+  };
+
   const handleLogin = (email: string, password: string) => {
     // Simulate login - in real app, this would call your auth API
     const newUser: User = {
@@ -99,6 +123,7 @@ export default function Home() {
     setUser(null);
     setExpenses([]);
     setGoals([]);
+    setBills([]);
     setShowAuthModal(true);
   };
 
@@ -129,6 +154,15 @@ export default function Home() {
             onAddExpense={handleAddExpense}
             expenses={expenses}
             onDeleteExpense={handleDeleteExpense}
+          />
+        );
+      case 'bills':
+        return (
+          <BillCalculator
+            bills={bills}
+            onSaveBill={handleSaveBill}
+            onUpdateBill={handleUpdateBill}
+            onDeleteBill={handleDeleteBill}
           />
         );
       case 'goals':

@@ -8,7 +8,8 @@ import {
   Settings,
   Wallet,
   Sparkles,
-  Target
+  Target,
+  Calculator
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -19,6 +20,7 @@ interface SidebarProps {
 const navigation = [
   { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, gradient: 'from-blue-500 to-indigo-600' },
   { id: 'expenses', name: 'Add Expense', icon: PlusCircle, gradient: 'from-emerald-500 to-teal-600' },
+  { id: 'bills', name: 'Bill Calculator', icon: Calculator, gradient: 'from-indigo-500 to-purple-600' },
   { id: 'goals', name: 'Goals', icon: Target, gradient: 'from-purple-500 to-pink-600' },
   { id: 'reports', name: 'Reports', icon: BarChart3, gradient: 'from-orange-500 to-red-600' },
   { id: 'settings', name: 'Settings', icon: Settings, gradient: 'from-slate-500 to-gray-600' },
