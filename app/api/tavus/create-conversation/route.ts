@@ -121,9 +121,10 @@ Your mission: Be their trusted financial guide, helping them make informed decis
       userName: userData.name
     });
 
+    // Use the exact format from your example
     const requestBody = {
       replica_id: replicaId,
-      persona_id: personaId, // Using your specific Persona ID
+      persona_id: personaId,
       conversation_name: `Financial Advisory Session - ${userData.name}`,
       conversational_context: conversationContext,
       properties: {
@@ -139,12 +140,12 @@ Your mission: Be their trusted financial guide, helping them make informed decis
 
     console.log('Tavus API request body:', JSON.stringify(requestBody, null, 2));
 
+    // Use the exact headers format from your example
     const response = await fetch('https://tavusapi.com/v2/conversations', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'x-api-key': apiKey, // Some APIs prefer this header format
+        'x-api-key': apiKey, // Use x-api-key as shown in your example
       },
       body: JSON.stringify(requestBody),
     });
