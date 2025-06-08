@@ -89,7 +89,10 @@ export function ExpenseForm({ onAddExpense, expenses, onDeleteExpense }: Expense
           <CardHeader className="pb-6">
             <CardTitle className="flex items-center gap-3 text-2xl">
               <div className={`p-3 rounded-2xl bg-gradient-to-r ${getTransactionColor(type)}`}>
-                {getTransactionIcon(type)({ className: "h-6 w-6 text-white" })}
+                {(() => {
+                  const IconComponent = getTransactionIcon(type);
+                  return <IconComponent className="h-6 w-6 text-white" />;
+                })()}
               </div>
               <span className={`bg-gradient-to-r ${getTransactionColor(type)} bg-clip-text text-transparent`}>
                 New {type === 'income' ? 'Income' : 'Expense'}
@@ -106,7 +109,7 @@ export function ExpenseForm({ onAddExpense, expenses, onDeleteExpense }: Expense
                 <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Transaction Type *</Label>
                 <div className="grid grid-cols-2 gap-3">
                   {TRANSACTION_TYPES.map((transactionType) => {
-                    const Icon = getTransactionIcon(transactionType);
+                    const IconComponent = getTransactionIcon(transactionType);
                     return (
                       <button
                         key={transactionType}
@@ -123,7 +126,7 @@ export function ExpenseForm({ onAddExpense, expenses, onDeleteExpense }: Expense
                       >
                         <div className="flex items-center justify-center gap-3">
                           <div className={`p-2 rounded-xl ${type === transactionType ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-800'}`}>
-                            <Icon className="h-5 w-5" />
+                            <IconComponent className="h-5 w-5" />
                           </div>
                           <span className="font-semibold capitalize">{transactionType}</span>
                         </div>
@@ -296,7 +299,7 @@ export function ExpenseForm({ onAddExpense, expenses, onDeleteExpense }: Expense
           <CardContent>
             <div className="space-y-4">
               {recentTransactions.map((transaction, index) => {
-                const Icon = getTransactionIcon(transaction.type);
+                const IconComponent = getTransactionIcon(transaction.type);
                 return (
                   <div
                     key={transaction.id}
@@ -305,7 +308,7 @@ export function ExpenseForm({ onAddExpense, expenses, onDeleteExpense }: Expense
                   >
                     <div className="flex items-center gap-4">
                       <div className={`p-2 rounded-xl bg-gradient-to-r ${getTransactionColor(transaction.type)}`}>
-                        <Icon className="h-4 w-4 text-white" />
+                        <IconComponent className="h-4 w-4 text-white" />
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
