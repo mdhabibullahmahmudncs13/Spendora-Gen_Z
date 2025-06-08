@@ -4,9 +4,14 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { User } from '@/types';
-import { Settings as SettingsIcon, User as UserIcon, LogOut, Video, Mic, Brain, Sparkles, Shield, Zap, Edit3 } from 'lucide-react';
+import { Settings as SettingsIcon, User as UserIcon, LogOut, Video, Mic, Brain, Sparkles, Shield, Zap, Edit3, Moon, Sun, Bell, DollarSign } from 'lucide-react';
 import { EditProfileModal } from '@/components/edit-profile-modal';
+import { useTheme } from 'next-themes';
+import { toast } from 'sonner';
 
 interface SettingsProps {
   user: User;
@@ -16,6 +21,25 @@ interface SettingsProps {
 
 export function Settings({ user, onLogout, onUpdateUser }: SettingsProps) {
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showPreferences, setShowPreferences] = useState(false);
+  const [notifications, setNotifications] = useState(true);
+  const [currency, setCurrency] = useState('USD');
+  const { theme, setTheme } = useTheme();
+
+  const handleNotificationToggle = (enabled: boolean) => {
+    setNotifications(enabled);
+    toast.success(enabled ? 'Notifications enabled' : 'Notifications disabled');
+  };
+
+  const handleCurrencyChange = (newCurrency: string) => {
+    setCurrency(newCurrency);
+    toast.success(`Currency changed to ${newCurrency}`);
+  };
+
+  const handleThemeChange = (newTheme: string) => {
+    setTheme(newTheme);
+    toast.success(`Theme changed to ${newTheme}`);
+  };
 
   return (
     <div className="space-y-8 p-6">
@@ -81,30 +105,115 @@ export function Settings({ user, onLogout, onUpdateUser }: SettingsProps) {
             <CardDescription className="text-base">Customize your experience</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-800 dark:to-blue-900/20 rounded-2xl border border-slate-200 dark:border-slate-700">
-                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Dark Mode</span>
-                <Badge variant="outline" className="bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 border-blue-200">
-                  Auto (System)
-                </Badge>
+            {!showPreferences ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-800 dark:to-blue-900/20 rounded-2xl border border-slate-200 dark:border-slate-700">
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Dark Mode</span>
+                  <Badge variant="outline" className="bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 border-blue-200">
+                    {theme === 'system' ? 'Auto (System)' : theme === 'dark' ? 'Dark' : 'Light'}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-700">
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Notifications</span>
+                  <Badge variant="outline" className="bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700 border-emerald-200">
+                    {notifications ? 'Enabled' : 'Disabled'}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-2xl border border-orange-200 dark:border-orange-700">
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Currency</span>
+                  <Badge variant="outline" className="bg-gradient-to-r from-orange-100 to-red-100 text-orange-700 border-orange-200">
+                    {currency} ({currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '£'})
+                  </Badge>
+                </div>
+                <Button 
+                  onClick={() => setShowPreferences(true)}
+                  className="w-full h-12 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-semibold transition-all duration-300 transform hover:scale-105"
+                >
+                  <Zap className="h-4 w-4 mr-2" />
+                  Manage Preferences
+                </Button>
               </div>
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-700">
-                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Notifications</span>
-                <Badge variant="outline" className="bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700 border-emerald-200">
-                  Enabled
-                </Badge>
+            ) : (
+              <div className="space-y-6">
+                {/* Theme Selection */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                    <div className="p-1 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600">
+                      {theme === 'dark' ? <Moon className="h-3 w-3 text-white" /> : <Sun className="h-3 w-3 text-white" />}
+                    </div>
+                    Theme
+                  </Label>
+                  <Select value={theme} onValueChange={handleThemeChange}>
+                    <SelectTrigger className="h-12 border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors duration-300">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="light">Light</SelectItem>
+                      <SelectItem value="dark">Dark</SelectItem>
+                      <SelectItem value="system">System</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Notifications Toggle */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                    <div className="p-1 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600">
+                      <Bell className="h-3 w-3 text-white" />
+                    </div>
+                    Notifications
+                  </Label>
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-700">
+                    <span className="text-sm text-emerald-700 dark:text-emerald-300">Enable push notifications</span>
+                    <Switch
+                      checked={notifications}
+                      onCheckedChange={handleNotificationToggle}
+                    />
+                  </div>
+                </div>
+
+                {/* Currency Selection */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                    <div className="p-1 rounded-lg bg-gradient-to-r from-orange-500 to-red-600">
+                      <DollarSign className="h-3 w-3 text-white" />
+                    </div>
+                    Currency
+                  </Label>
+                  <Select value={currency} onValueChange={handleCurrencyChange}>
+                    <SelectTrigger className="h-12 border-2 border-slate-200 dark:border-slate-700 focus:border-orange-500 transition-colors duration-300">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD ($)</SelectItem>
+                      <SelectItem value="EUR">EUR (€)</SelectItem>
+                      <SelectItem value="GBP">GBP (£)</SelectItem>
+                      <SelectItem value="CAD">CAD (C$)</SelectItem>
+                      <SelectItem value="AUD">AUD (A$)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button 
+                    onClick={() => setShowPreferences(false)}
+                    variant="outline"
+                    className="flex-1 h-12 border-2 border-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-300"
+                  >
+                    Back
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setShowPreferences(false);
+                      toast.success('Preferences saved successfully! 🎉');
+                    }}
+                    className="flex-1 h-12 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold transition-all duration-300 transform hover:scale-105"
+                  >
+                    Save Changes
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-2xl border border-orange-200 dark:border-orange-700">
-                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Currency</span>
-                <Badge variant="outline" className="bg-gradient-to-r from-orange-100 to-red-100 text-orange-700 border-orange-200">
-                  USD ($)
-                </Badge>
-              </div>
-            </div>
-            <Button variant="outline" className="w-full h-12 border-2 border-purple-300 hover:bg-gradient-to-r hover:from-purple-500 hover:to-pink-600 hover:text-white hover:border-transparent transition-all duration-300" disabled>
-              <Zap className="h-4 w-4 mr-2" />
-              Manage Preferences
-            </Button>
+            )}
           </CardContent>
         </Card>
       </div>
