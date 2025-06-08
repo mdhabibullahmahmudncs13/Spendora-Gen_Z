@@ -7,6 +7,7 @@ import { Expense, User } from '@/types';
 import { DollarSign, TrendingUp, TrendingDown, CreditCard, Bot, Video, Mic, Sparkles, Target, Zap } from 'lucide-react';
 import { RecentExpenses } from '@/components/recent-expenses';
 import { ExpenseChart } from '@/components/expense-chart';
+import { AIInsights } from '@/components/ai-insights';
 
 interface DashboardProps {
   expenses: Expense[];
@@ -152,38 +153,11 @@ export function Dashboard({ expenses, user }: DashboardProps) {
         </Card>
       </div>
 
-      {/* AI Features Section */}
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card className="gradient-card border-2 border-dashed border-purple-300 dark:border-purple-600 hover:border-purple-500 transition-all duration-300 hover:shadow-2xl transform hover:-translate-y-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <div className="p-2 rounded-full bg-gradient-to-r from-purple-500 to-blue-600">
-                <Bot className="h-5 w-5 text-white" />
-              </div>
-              <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                AI Financial Tips
-              </span>
-            </CardTitle>
-            <CardDescription>
-              Get personalized insights based on your spending patterns
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-xl border border-purple-200 dark:border-purple-700">
-                <p className="text-sm text-slate-700 dark:text-slate-300">
-                  🎯 Based on your spending, consider setting a monthly budget of ${(totalThisMonth * 1.1).toFixed(0)}
-                </p>
-              </div>
-              <Button variant="outline" className="w-full group hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-600 hover:text-white transition-all duration-300" disabled>
-                <Sparkles className="h-4 w-4 mr-2 group-hover:animate-spin" />
-                Get More AI Insights
-                <Badge variant="secondary" className="ml-2 bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700">OpenAI</Badge>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      {/* AI Insights Section */}
+      <AIInsights expenses={expenses} />
 
+      {/* Additional AI Features Section */}
+      <div className="grid gap-6 md:grid-cols-2">
         <Card className="gradient-card border-2 border-dashed border-emerald-300 dark:border-emerald-600 hover:border-emerald-500 transition-all duration-300 hover:shadow-2xl transform hover:-translate-y-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
