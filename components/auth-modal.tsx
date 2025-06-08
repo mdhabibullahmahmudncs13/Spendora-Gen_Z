@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wallet, Shield, BarChart3, Bot } from 'lucide-react';
+import { Wallet, Shield, BarChart3, Bot, Sparkles, Zap } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -39,37 +39,54 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md gradient-card border-0">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2 text-center">
-            <div className="p-2 bg-primary rounded-lg">
-              <Wallet className="h-6 w-6 text-primary-foreground" />
+          <DialogTitle className="flex items-center justify-center space-x-3 text-center">
+            <div className="relative">
+              <div className="p-3 bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 rounded-2xl shadow-lg">
+                <Wallet className="h-8 w-8 text-white" />
+              </div>
+              <div className="absolute -top-1 -right-1">
+                <Sparkles className="h-4 w-4 text-yellow-400 animate-pulse" />
+              </div>
             </div>
-            <span>Welcome to FinanceAI</span>
+            <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Welcome to FinanceAI
+            </span>
           </DialogTitle>
         </DialogHeader>
         
-        <div className="grid grid-cols-2 gap-4 py-4">
-          <div className="flex flex-col items-center p-3 rounded-lg bg-muted">
-            <Shield className="h-6 w-6 text-primary mb-2" />
-            <span className="text-xs text-center">Secure Data</span>
+        <div className="grid grid-cols-2 gap-4 py-6">
+          <div className="flex flex-col items-center p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-700">
+            <div className="p-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 mb-3">
+              <Shield className="h-6 w-6 text-white" />
+            </div>
+            <span className="text-xs text-center font-semibold text-emerald-700 dark:text-emerald-300">Secure Data</span>
           </div>
-          <div className="flex flex-col items-center p-3 rounded-lg bg-muted">
-            <BarChart3 className="h-6 w-6 text-primary mb-2" />
-            <span className="text-xs text-center">Smart Analytics</span>
+          <div className="flex flex-col items-center p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700">
+            <div className="p-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 mb-3">
+              <BarChart3 className="h-6 w-6 text-white" />
+            </div>
+            <span className="text-xs text-center font-semibold text-blue-700 dark:text-blue-300">Smart Analytics</span>
           </div>
         </div>
 
         <Tabs defaultValue="login" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 bg-slate-100 dark:bg-slate-800 rounded-xl">
+            <TabsTrigger value="login" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">
+              Login
+            </TabsTrigger>
+            <TabsTrigger value="signup" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-600 data-[state=active]:text-white">
+              Sign Up
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="login">
-            <Card>
+            <Card className="gradient-card border-0">
               <CardHeader>
-                <CardTitle>Login</CardTitle>
+                <CardTitle className="text-xl bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                  Login
+                </CardTitle>
                 <CardDescription>
                   Enter your credentials to access your financial dashboard
                 </CardDescription>
@@ -77,28 +94,31 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
               <CardContent>
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div>
-                    <Label htmlFor="login-email">Email</Label>
+                    <Label htmlFor="login-email" className="text-sm font-semibold">Email</Label>
                     <Input
                       id="login-email"
                       type="email"
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       placeholder="Enter your email"
+                      className="mt-1 h-11 border-2 border-slate-200 dark:border-slate-700 focus:border-purple-500 transition-colors duration-300"
                       required
                     />
                   </div>
                   <div>
-                    <Label htmlFor="login-password">Password</Label>
+                    <Label htmlFor="login-password" className="text-sm font-semibold">Password</Label>
                     <Input
                       id="login-password"
                       type="password"
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
                       placeholder="Enter your password"
+                      className="mt-1 h-11 border-2 border-slate-200 dark:border-slate-700 focus:border-purple-500 transition-colors duration-300"
                       required
                     />
                   </div>
-                  <Button type="submit" className="w-full">
+                  <Button type="submit" className="w-full h-11 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold transition-all duration-300 transform hover:scale-105">
+                    <Zap className="h-4 w-4 mr-2" />
                     Login
                   </Button>
                 </form>
@@ -107,9 +127,11 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
           </TabsContent>
           
           <TabsContent value="signup">
-            <Card>
+            <Card className="gradient-card border-0">
               <CardHeader>
-                <CardTitle>Create Account</CardTitle>
+                <CardTitle className="text-xl bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                  Create Account
+                </CardTitle>
                 <CardDescription>
                   Join FinanceAI to start tracking your expenses smartly
                 </CardDescription>
@@ -117,39 +139,43 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
               <CardContent>
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div>
-                    <Label htmlFor="signup-name">Full Name</Label>
+                    <Label htmlFor="signup-name" className="text-sm font-semibold">Full Name</Label>
                     <Input
                       id="signup-name"
                       type="text"
                       value={signupName}
                       onChange={(e) => setSignupName(e.target.value)}
                       placeholder="Enter your full name"
+                      className="mt-1 h-11 border-2 border-slate-200 dark:border-slate-700 focus:border-emerald-500 transition-colors duration-300"
                       required
                     />
                   </div>
                   <div>
-                    <Label htmlFor="signup-email">Email</Label>
+                    <Label htmlFor="signup-email" className="text-sm font-semibold">Email</Label>
                     <Input
                       id="signup-email"
                       type="email"
                       value={signupEmail}
                       onChange={(e) => setSignupEmail(e.target.value)}
                       placeholder="Enter your email"
+                      className="mt-1 h-11 border-2 border-slate-200 dark:border-slate-700 focus:border-emerald-500 transition-colors duration-300"
                       required
                     />
                   </div>
                   <div>
-                    <Label htmlFor="signup-password">Password</Label>
+                    <Label htmlFor="signup-password" className="text-sm font-semibold">Password</Label>
                     <Input
                       id="signup-password"
                       type="password"
                       value={signupPassword}
                       onChange={(e) => setSignupPassword(e.target.value)}
                       placeholder="Create a password"
+                      className="mt-1 h-11 border-2 border-slate-200 dark:border-slate-700 focus:border-emerald-500 transition-colors duration-300"
                       required
                     />
                   </div>
-                  <Button type="submit" className="w-full">
+                  <Button type="submit" className="w-full h-11 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold transition-all duration-300 transform hover:scale-105">
+                    <Sparkles className="h-4 w-4 mr-2" />
                     Create Account
                   </Button>
                 </form>
@@ -158,8 +184,10 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
           </TabsContent>
         </Tabs>
 
-        <div className="flex items-center justify-center space-x-1 text-xs text-muted-foreground pt-4 border-t">
-          <Bot className="h-4 w-4" />
+        <div className="flex items-center justify-center space-x-2 text-xs text-slate-500 dark:text-slate-400 pt-4 border-t border-slate-200 dark:border-slate-700">
+          <div className="p-1 rounded-full bg-gradient-to-r from-purple-500 to-blue-600">
+            <Bot className="h-3 w-3 text-white" />
+          </div>
           <span>AI-powered financial insights coming soon</span>
         </div>
       </DialogContent>
