@@ -5,16 +5,18 @@ import { Dashboard } from '@/components/dashboard';
 import { ExpenseForm } from '@/components/expense-form';
 import { Reports } from '@/components/reports';
 import { Settings } from '@/components/settings';
+import { GoalsDashboard } from '@/components/goals-dashboard';
 import { Sidebar } from '@/components/sidebar';
 import { Header } from '@/components/header';
 import { AuthModal } from '@/components/auth-modal';
 import { useLocalStorage } from '@/hooks/use-local-storage';
-import { Expense, User } from '@/types';
+import { Expense, User, FinancialGoal } from '@/types';
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [user, setUser] = useLocalStorage<User | null>('financeai_user', null);
   const [expenses, setExpenses] = useLocalStorage<Expense[]>('financeai_expenses', []);
+  const [goals, setGoals] = useLocalStorage<FinancialGoal[]>('financeai_goals', []);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
@@ -33,6 +35,27 @@ export default function Home() {
 
   const handleDeleteExpense = (id: string) => {
     setExpenses(expenses.filter(exp => exp.id !== id));
+  };
+
+  const handleAddGoal = (goalData: Omit<FinancialGoal, 'id' | 'createdAt'>) => {
+    const newGoal: FinancialGoal = {
+      ...goalData,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
+    };
+    setGoals([...goals, newGoal]);
+  };
+
+  const handleUpdateGoal = (id: string, goalData: Omit<FinancialGoal, 'id' | 'createdAt'>) => {
+    setGoals(goals.map(goal => 
+      goal.id === id 
+        ? { ...goalData, id, createdAt: goal.createdAt }
+        : goal
+    ));
+  };
+
+  const handleDeleteGoal = (id: string) => {
+    setGoals(goals.filter(goal => goal.id !== id));
   };
 
   const handleLogin = (email: string, password: string) => {
@@ -62,6 +85,7 @@ export default function Home() {
   const handleLogout = () => {
     setUser(null);
     setExpenses([]);
+    setGoals([]);
     setShowAuthModal(true);
   };
 
@@ -85,7 +109,7 @@ export default function Home() {
   const renderContent = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <Dashboard expenses={expenses} user={user} />;
+        return <Dashboard expenses={expenses} user={user} goals={goals} />;
       case 'expenses':
         return (
           <ExpenseForm
@@ -94,12 +118,21 @@ export default function Home() {
             onDeleteExpense={handleDeleteExpense}
           />
         );
+      case 'goals':
+        return (
+          <GoalsDashboard
+            goals={goals}
+            onAddGoal={handleAddGoal}
+            onUpdateGoal={handleUpdateGoal}
+            onDeleteGoal={handleDeleteGoal}
+          />
+        );
       case 'reports':
         return <Reports expenses={expenses} />;
       case 'settings':
         return <Settings user={user} onLogout={handleLogout} onUpdateUser={handleUpdateUser} />;
       default:
-        return <Dashboard expenses={expenses} user={user} />;
+        return <Dashboard expenses={expenses} user={user} goals={goals} />;
     }
   };
 

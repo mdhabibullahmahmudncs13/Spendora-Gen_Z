@@ -3,8 +3,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Expense, User } from '@/types';
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, Bot, Video, Mic, Sparkles, Target, Zap } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Expense, User, FinancialGoal } from '@/types';
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, Bot, Video, Mic, Sparkles, Target, Zap, Plus, CheckCircle } from 'lucide-react';
 import { RecentExpenses } from '@/components/recent-expenses';
 import { ExpenseChart } from '@/components/expense-chart';
 import { AIInsights } from '@/components/ai-insights';
@@ -12,9 +13,10 @@ import { AIInsights } from '@/components/ai-insights';
 interface DashboardProps {
   expenses: Expense[];
   user: User;
+  goals?: FinancialGoal[];
 }
 
-export function Dashboard({ expenses, user }: DashboardProps) {
+export function Dashboard({ expenses, user, goals = [] }: DashboardProps) {
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   
@@ -42,6 +44,14 @@ export function Dashboard({ expenses, user }: DashboardProps) {
   const topCategory = Object.entries(categoryTotals).sort(([,a], [,b]) => b - a)[0];
   const avgDailySpending = totalThisMonth / new Date().getDate();
 
+  // Goal statistics
+  const activeGoals = goals.filter(goal => goal.isActive);
+  const completedGoals = goals.filter(goal => (goal.currentAmount / goal.targetAmount) * 100 >= 100);
+  const nearCompletionGoals = activeGoals.filter(goal => {
+    const progress = (goal.currentAmount / goal.targetAmount) * 100;
+    return progress >= 75 && progress < 100;
+  });
+
   return (
     <div className="space-y-8 p-6">
       {/* Hero Section */}
@@ -58,7 +68,7 @@ export function Dashboard({ expenses, user }: DashboardProps) {
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2 bg-white/20 rounded-full px-4 py-2">
                   <Target className="h-5 w-5" />
-                  <span className="font-medium">Monthly Goal: $2,000</span>
+                  <span className="font-medium">{activeGoals.length} Active Goals</span>
                 </div>
                 <div className="flex items-center space-x-2 bg-white/20 rounded-full px-4 py-2">
                   <Zap className="h-5 w-5" />
@@ -120,13 +130,30 @@ export function Dashboard({ expenses, user }: DashboardProps) {
 
         <Card className="gradient-card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Top Category</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Active Goals</CardTitle>
             <div className="p-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-600">
+              <Target className="h-4 w-4 text-white" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              {activeGoals.length}
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+              {completedGoals.length} completed this year
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="gradient-card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-0">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Top Category</CardTitle>
+            <div className="p-2 rounded-full bg-gradient-to-r from-orange-500 to-red-600">
               <TrendingUp className="h-4 w-4 text-white" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            <div className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
               {topCategory ? topCategory[0] : 'None'}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
@@ -134,24 +161,88 @@ export function Dashboard({ expenses, user }: DashboardProps) {
             </p>
           </CardContent>
         </Card>
+      </div>
 
-        <Card className="gradient-card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Total Expenses</CardTitle>
-            <div className="p-2 rounded-full bg-gradient-to-r from-orange-500 to-red-600">
-              <DollarSign className="h-4 w-4 text-white" />
-            </div>
+      {/* Goals Progress Section */}
+      {activeGoals.length > 0 && (
+        <Card className="gradient-card hover:shadow-2xl transition-all duration-300 border-0">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3 text-2xl">
+              <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-600">
+                <Target className="h-6 w-6 text-white" />
+              </div>
+              <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                Goal Progress
+              </span>
+              {nearCompletionGoals.length > 0 && (
+                <Badge variant="secondary" className="bg-gradient-to-r from-yellow-100 to-orange-100 text-orange-700">
+                  {nearCompletionGoals.length} near completion
+                </Badge>
+              )}
+            </CardTitle>
+            <CardDescription className="text-base">
+              Track your financial goals and celebrate your achievements
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-              {expenses.length}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {activeGoals.slice(0, 3).map((goal) => {
+                const progress = (goal.currentAmount / goal.targetAmount) * 100;
+                const isNearCompletion = progress >= 75;
+                
+                return (
+                  <div
+                    key={goal.id}
+                    className={`p-4 rounded-2xl border-2 transition-all duration-300 ${
+                      isNearCompletion
+                        ? 'bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border-yellow-300 dark:border-yellow-600'
+                        : 'bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-200 dark:border-purple-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-slate-800 dark:text-slate-200">
+                        {goal.title}
+                      </h4>
+                      {progress >= 100 && (
+                        <CheckCircle className="h-5 w-5 text-emerald-500" />
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600 dark:text-slate-400">Progress</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                          {progress.toFixed(1)}%
+                        </span>
+                      </div>
+                      <Progress value={Math.min(100, progress)} className="h-2" />
+                      <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
+                        <span>${goal.currentAmount.toFixed(2)}</span>
+                        <span>${goal.targetAmount.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              
+              {activeGoals.length === 0 && (
+                <div className="col-span-full text-center py-8">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 flex items-center justify-center mx-auto mb-4">
+                    <Target className="h-8 w-8 text-purple-500" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2">No Goals Set</h3>
+                  <p className="text-slate-600 dark:text-slate-400 mb-4">
+                    Start your financial journey by setting your first goal
+                  </p>
+                  <Button className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Set Your First Goal
+                  </Button>
+                </div>
+              )}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-              All time tracked expenses
-            </p>
           </CardContent>
         </Card>
-      </div>
+      )}
 
       {/* AI Insights Section */}
       <AIInsights expenses={expenses} />

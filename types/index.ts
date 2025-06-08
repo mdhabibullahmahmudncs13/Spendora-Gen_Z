@@ -14,6 +14,21 @@ export interface Expense {
   createdAt: string;
 }
 
+export interface FinancialGoal {
+  id: string;
+  title: string;
+  description: string;
+  targetAmount: number;
+  currentAmount: number;
+  category?: string;
+  type: 'spending' | 'saving' | 'income';
+  period: 'weekly' | 'monthly' | 'yearly' | 'custom';
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface MonthlyReport {
   month: string;
   totalExpenses: number;
@@ -37,4 +52,19 @@ export const EXPENSE_CATEGORIES = [
   'Other',
 ] as const;
 
+export const GOAL_TYPES = [
+  'spending',
+  'saving',
+  'income',
+] as const;
+
+export const GOAL_PERIODS = [
+  'weekly',
+  'monthly',
+  'yearly',
+  'custom',
+] as const;
+
 export type ExpenseCategory = typeof EXPENSE_CATEGORIES[number];
+export type GoalType = typeof GOAL_TYPES[number];
+export type GoalPeriod = typeof GOAL_PERIODS[number];
