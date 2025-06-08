@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Expense } from '@/types';
-import { Bot, Sparkles, TrendingUp, Target, AlertTriangle, Lightbulb, Loader2, RefreshCw } from 'lucide-react';
+import { Bot, Sparkles, TrendingUp, Target, AlertTriangle, Lightbulb, Loader2, RefreshCw, Zap, Brain } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FinancialInsight {
@@ -42,6 +42,30 @@ export function AIInsights({ expenses }: AIInsightsProps) {
   const [loading, setLoading] = useState(false);
   const [personalizedTip, setPersonalizedTip] = useState<string>('');
   const [tipLoading, setTipLoading] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(false);
+
+  // Check if we have expenses to analyze
+  const hasExpenses = expenses.length > 0;
+  const expenseTransactions = expenses.filter(exp => exp.type === 'expense');
+  const hasExpenseData = expenseTransactions.length > 0;
+
+  useEffect(() => {
+    // Check if API key is configured by making a test call
+    const checkApiKey = async () => {
+      try {
+        const response = await fetch('/api/financial-tip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ expenses: [] }),
+        });
+        setHasApiKey(response.ok);
+      } catch (error) {
+        setHasApiKey(false);
+      }
+    };
+    
+    checkApiKey();
+  }, []);
 
   const getInsightIcon = (type: string) => {
     switch (type) {
@@ -65,16 +89,16 @@ export function AIInsights({ expenses }: AIInsightsProps) {
 
   const getImpactBadge = (impact: string) => {
     const colors = {
-      low: 'bg-slate-100 text-slate-700',
-      medium: 'bg-yellow-100 text-yellow-700',
-      high: 'bg-red-100 text-red-700'
+      low: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+      medium: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300',
+      high: 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300'
     };
     return colors[impact as keyof typeof colors] || colors.medium;
   };
 
   const analyzeSpending = async () => {
-    if (expenses.length === 0) {
-      toast.error('Add some expenses first to get AI insights!');
+    if (!hasExpenseData) {
+      toast.error('Add some expense transactions first to get AI insights!');
       return;
     }
 
@@ -105,8 +129,8 @@ export function AIInsights({ expenses }: AIInsightsProps) {
   };
 
   const generateTip = async () => {
-    if (expenses.length === 0) {
-      toast.error('Add some expenses first to get personalized tips!');
+    if (!hasExpenses) {
+      toast.error('Add some transactions first to get personalized tips!');
       return;
     }
 
@@ -121,7 +145,8 @@ export function AIInsights({ expenses }: AIInsightsProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate tip');
+        const errorData = await response.json();
+        throw new Error(errorData.details || 'Failed to generate tip');
       }
 
       const data = await response.json();
@@ -135,12 +160,12 @@ export function AIInsights({ expenses }: AIInsightsProps) {
     }
   };
 
-  // Auto-generate tip when component mounts
+  // Auto-generate tip when component mounts and has expenses
   useEffect(() => {
-    if (expenses.length > 0 && !personalizedTip) {
+    if (hasExpenses && !personalizedTip && hasApiKey) {
       generateTip();
     }
-  }, [expenses.length]);
+  }, [hasExpenses, hasApiKey]);
 
   return (
     <div className="space-y-6">
@@ -154,6 +179,11 @@ export function AIInsights({ expenses }: AIInsightsProps) {
             <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
               AI Financial Tips
             </span>
+            {!hasApiKey && (
+              <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-200">
+                API Key Needed
+              </Badge>
+            )}
           </CardTitle>
           <CardDescription>
             Get personalized insights based on your spending patterns
@@ -167,10 +197,26 @@ export function AIInsights({ expenses }: AIInsightsProps) {
                   💡 {personalizedTip}
                 </p>
               </div>
-            ) : (
+            ) : !hasExpenses ? (
               <div className="p-4 bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-900/20 dark:to-blue-900/20 rounded-xl border border-slate-200 dark:border-slate-700">
                 <p className="text-sm text-slate-600 dark:text-slate-400">
                   Add some expenses to get personalized AI tips!
+                </p>
+              </div>
+            ) : !hasApiKey ? (
+              <div className="p-4 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-xl border border-orange-200 dark:border-orange-700">
+                <div className="flex items-center gap-2 mb-2">
+                  <Brain className="h-4 w-4 text-orange-600" />
+                  <span className="text-sm font-semibold text-orange-800 dark:text-orange-200">OpenAI API Key Required</span>
+                </div>
+                <p className="text-sm text-orange-700 dark:text-orange-300">
+                  Configure your OpenAI API key in the .env.local file to enable AI-powered financial insights and personalized tips.
+                </p>
+              </div>
+            ) : (
+              <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-700">
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  🤖 AI is analyzing your transactions to generate personalized tips...
                 </p>
               </div>
             )}
@@ -178,7 +224,7 @@ export function AIInsights({ expenses }: AIInsightsProps) {
             <div className="flex gap-2">
               <Button 
                 onClick={generateTip} 
-                disabled={tipLoading || expenses.length === 0}
+                disabled={tipLoading || !hasExpenses || !hasApiKey}
                 variant="outline" 
                 className="flex-1 group hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-600 hover:text-white transition-all duration-300"
               >
@@ -192,7 +238,7 @@ export function AIInsights({ expenses }: AIInsightsProps) {
               
               <Button 
                 onClick={analyzeSpending} 
-                disabled={loading || expenses.length === 0}
+                disabled={loading || !hasExpenseData || !hasApiKey}
                 variant="outline" 
                 className="group hover:bg-gradient-to-r hover:from-emerald-500 hover:to-teal-600 hover:text-white transition-all duration-300"
               >
@@ -203,6 +249,14 @@ export function AIInsights({ expenses }: AIInsightsProps) {
                 )}
               </Button>
             </div>
+
+            {!hasApiKey && (
+              <div className="text-center pt-2">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Using fallback analysis. Add your OpenAI API key for enhanced AI insights.
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
