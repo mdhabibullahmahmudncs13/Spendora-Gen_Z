@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Expense, User } from '@/types';
-import { Video, Phone, PhoneOff, Mic, MicOff, Camera, CameraOff, Settings, Loader2, AlertCircle, CheckCircle, Clock, Sparkles } from 'lucide-react';
+import { Video, Phone, PhoneOff, Mic, MicOff, Camera, CameraOff, Settings, Loader2, AlertCircle, CheckCircle, Clock, Sparkles, ExternalLink, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface VideoAdvisorModalProps {
@@ -30,6 +30,7 @@ export function VideoAdvisorModal({ isOpen, onClose, user, expenses }: VideoAdvi
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Calculate financial context for the AI
   const getFinancialContext = () => {
@@ -134,13 +135,25 @@ export function VideoAdvisorModal({ isOpen, onClose, user, expenses }: VideoAdvi
       setConversationData(data);
       setIsConnected(true);
       setCallDuration(0);
+      setRetryCount(0);
       
       toast.success('Video session started! 🎥');
     } catch (error) {
       console.error('Video call error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to start video call';
       setConnectionError(errorMessage);
-      toast.error('Failed to start video session');
+      setRetryCount(prev => prev + 1);
+      
+      // Provide more helpful error messages
+      if (errorMessage.includes('credentials') || errorMessage.includes('Invalid access token')) {
+        toast.error('Invalid API credentials. Please check your Tavus configuration.');
+      } else if (errorMessage.includes('Rate limit')) {
+        toast.error('Rate limit exceeded. Please wait before trying again.');
+      } else if (errorMessage.includes('server error')) {
+        toast.error('Server error. Please try again later.');
+      } else {
+        toast.error('Failed to start video session');
+      }
     } finally {
       setIsConnecting(false);
     }
@@ -160,6 +173,7 @@ export function VideoAdvisorModal({ isOpen, onClose, user, expenses }: VideoAdvi
       endVideoCall();
     }
     setConnectionError(null);
+    setRetryCount(0);
     onClose();
   };
 
@@ -171,6 +185,43 @@ export function VideoAdvisorModal({ isOpen, onClose, user, expenses }: VideoAdvi
   const toggleCamera = () => {
     setIsCameraOff(!isCameraOff);
     toast.success(isCameraOff ? 'Camera turned on' : 'Camera turned off');
+  };
+
+  const retryConnection = () => {
+    setConnectionError(null);
+    startVideoCall();
+  };
+
+  const getErrorHelp = (error: string) => {
+    if (error.includes('credentials') || error.includes('Invalid access token')) {
+      return {
+        title: 'API Credentials Issue',
+        description: 'Your Tavus API credentials appear to be invalid or expired.',
+        actions: [
+          'Verify your API key in the Tavus dashboard',
+          'Check that your replica ID is correct',
+          'Ensure your account has active credits',
+          'Restart the development server after updating credentials'
+        ]
+      };
+    } else if (error.includes('Rate limit')) {
+      return {
+        title: 'Rate Limit Exceeded',
+        description: 'Too many requests have been made. Please wait before trying again.',
+        actions: ['Wait a few minutes before retrying', 'Check your Tavus account usage limits']
+      };
+    } else if (error.includes('server error')) {
+      return {
+        title: 'Server Error',
+        description: 'There was an issue with the Tavus service.',
+        actions: ['Try again in a few moments', 'Check Tavus status page for service issues']
+      };
+    }
+    return {
+      title: 'Connection Error',
+      description: 'Unable to establish video session.',
+      actions: ['Check your internet connection', 'Try refreshing the page']
+    };
   };
 
   return (
@@ -234,19 +285,45 @@ export function VideoAdvisorModal({ isOpen, onClose, user, expenses }: VideoAdvi
 
               {/* Video placeholder */}
               <div className="flex-1 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl border-2 border-dashed border-emerald-300 dark:border-emerald-600 flex items-center justify-center mb-6">
-                <div className="text-center">
+                <div className="text-center max-w-md mx-auto p-6">
                   {connectionError ? (
                     <>
                       <div className="w-20 h-20 rounded-full bg-gradient-to-r from-red-500 to-pink-600 flex items-center justify-center mx-auto mb-4">
                         <AlertCircle className="h-10 w-10 text-white" />
                       </div>
-                      <p className="text-red-700 dark:text-red-300 font-medium mb-2">Connection Failed</p>
-                      <p className="text-sm text-red-600 dark:text-red-400 max-w-md mx-auto">{connectionError}</p>
+                      <p className="text-red-700 dark:text-red-300 font-medium mb-2">{getErrorHelp(connectionError).title}</p>
+                      <p className="text-sm text-red-600 dark:text-red-400 mb-4">{getErrorHelp(connectionError).description}</p>
+                      
+                      <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 mb-4">
+                        <h4 className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">Troubleshooting Steps:</h4>
+                        <ul className="text-xs text-red-700 dark:text-red-300 space-y-1">
+                          {getErrorHelp(connectionError).actions.map((action, index) => (
+                            <li key={index} className="flex items-start gap-2">
+                              <span className="text-red-500 mt-0.5">•</span>
+                              {action}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
                       {connectionError.includes('credentials') && (
-                        <p className="text-xs text-red-500 dark:text-red-400 mt-2 max-w-md mx-auto">
-                          Please configure your Tavus API credentials in the .env.local file
-                        </p>
+                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-4">
+                          <p className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                            <ExternalLink className="h-3 w-3" />
+                            Visit the <a href="https://tavusapi.com/dashboard" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">Tavus Dashboard</a> to verify your credentials
+                          </p>
+                        </div>
                       )}
+
+                      <Button
+                        onClick={retryConnection}
+                        variant="outline"
+                        size="sm"
+                        className="border-red-300 text-red-700 hover:bg-red-50 dark:border-red-600 dark:text-red-300 dark:hover:bg-red-900/20"
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Retry Connection {retryCount > 0 && `(${retryCount})`}
+                      </Button>
                     </>
                   ) : (
                     <>
@@ -267,7 +344,7 @@ export function VideoAdvisorModal({ isOpen, onClose, user, expenses }: VideoAdvi
                 <Button
                   onClick={startVideoCall}
                   disabled={isConnecting}
-                  className="h-14 px-8 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold transition-all duration-300 transform hover:scale-105"
+                  className="h-14 px-8 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:transform-none"
                 >
                   {isConnecting ? (
                     <>
@@ -277,7 +354,7 @@ export function VideoAdvisorModal({ isOpen, onClose, user, expenses }: VideoAdvi
                   ) : (
                     <>
                       <Video className="h-5 w-5 mr-2" />
-                      Start Video Session
+                      {connectionError ? 'Try Again' : 'Start Video Session'}
                     </>
                   )}
                 </Button>
