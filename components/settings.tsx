@@ -4,12 +4,14 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { User } from '@/types';
-import { Settings as SettingsIcon, User as UserIcon, LogOut, Video, Mic, Brain, Sparkles, Shield, Zap, Edit3, Moon, Sun, Bell, DollarSign } from 'lucide-react';
+import { User, FinancialGoal } from '@/types';
+import { Settings as SettingsIcon, User as UserIcon, LogOut, Video, Mic, Brain, Sparkles, Shield, Zap, Edit3, Moon, Sun, Bell, DollarSign, Target, Plus, CheckCircle, Calendar } from 'lucide-react';
 import { EditProfileModal } from '@/components/edit-profile-modal';
+import { GoalSettingModal } from '@/components/goal-setting-modal';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
 
@@ -17,11 +19,17 @@ interface SettingsProps {
   user: User;
   onLogout: () => void;
   onUpdateUser: (updatedUser: User) => void;
+  goals?: FinancialGoal[];
+  onAddGoal?: (goal: Omit<FinancialGoal, 'id' | 'createdAt'>) => void;
+  onUpdateGoal?: (id: string, goal: Omit<FinancialGoal, 'id' | 'createdAt'>) => void;
+  onDeleteGoal?: (id: string) => void;
 }
 
-export function Settings({ user, onLogout, onUpdateUser }: SettingsProps) {
+export function Settings({ user, onLogout, onUpdateUser, goals = [], onAddGoal, onUpdateGoal, onDeleteGoal }: SettingsProps) {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
+  const [showGoalModal, setShowGoalModal] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<FinancialGoal | null>(null);
   const [notifications, setNotifications] = useState(true);
   const [currency, setCurrency] = useState('USD');
   const { theme, setTheme } = useTheme();
@@ -41,14 +49,48 @@ export function Settings({ user, onLogout, onUpdateUser }: SettingsProps) {
     toast.success(`Theme changed to ${newTheme}`);
   };
 
+  const handleEditGoal = (goal: FinancialGoal) => {
+    setEditingGoal(goal);
+    setShowGoalModal(true);
+  };
+
+  const handleSaveGoal = (goalData: Omit<FinancialGoal, 'id' | 'createdAt'>) => {
+    if (editingGoal && onUpdateGoal) {
+      onUpdateGoal(editingGoal.id, goalData);
+    } else if (onAddGoal) {
+      onAddGoal(goalData);
+    }
+    setEditingGoal(null);
+    setShowGoalModal(false);
+  };
+
+  const handleDeleteGoal = (id: string) => {
+    if (onDeleteGoal) {
+      onDeleteGoal(id);
+      toast.success('Goal deleted successfully');
+    }
+  };
+
+  const activeGoals = goals.filter(goal => goal.isActive);
+  const completedGoals = goals.filter(goal => (goal.currentAmount / goal.targetAmount) * 100 >= 100);
+
+  const getGoalIcon = (type: string) => {
+    switch (type) {
+      case 'spending': return '💸';
+      case 'saving': return '🏦';
+      case 'income': return '💰';
+      default: return '🎯';
+    }
+  };
+
   return (
     <div className="space-y-8 p-6">
       {/* Hero Section */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-orange-500 via-red-600 to-pink-600 p-8 text-white">
         <div className="absolute inset-0 bg-gradient-to-r from-orange-600/20 via-red-600/20 to-pink-600/20"></div>
         <div className="relative z-10">
-          <h1 className="text-4xl font-bold mb-2">Settings & Preferences ⚙️</h1>
-          <p className="text-xl text-orange-100">Manage your account and app preferences</p>
+          <h1 className="text-4xl font-bold mb-2">Settings & Goals ⚙️</h1>
+          <p className="text-xl text-orange-100">Manage your account, preferences, and financial goals</p>
         </div>
       </div>
 
@@ -218,6 +260,126 @@ export function Settings({ user, onLogout, onUpdateUser }: SettingsProps) {
         </Card>
       </div>
 
+      {/* Goals Management Section */}
+      <Card className="gradient-card hover:shadow-2xl transition-all duration-300 border-0">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3 text-2xl">
+            <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-600">
+              <Target className="h-6 w-6 text-white" />
+            </div>
+            <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              Financial Goals
+            </span>
+            <Badge variant="secondary" className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700">
+              {activeGoals.length} Active
+            </Badge>
+          </CardTitle>
+          <CardDescription className="text-base">
+            Manage your financial goals and track your progress
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* Goals Summary */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl border border-blue-200 dark:border-blue-700 text-center">
+                <div className="text-2xl font-bold text-blue-600">{activeGoals.length}</div>
+                <div className="text-sm text-blue-700 dark:text-blue-300">Active Goals</div>
+              </div>
+              <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-700 text-center">
+                <div className="text-2xl font-bold text-emerald-600">{completedGoals.length}</div>
+                <div className="text-sm text-emerald-700 dark:text-emerald-300">Completed</div>
+              </div>
+              <div className="p-4 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-2xl border border-orange-200 dark:border-orange-700 text-center">
+                <div className="text-2xl font-bold text-orange-600">{goals.length}</div>
+                <div className="text-sm text-orange-700 dark:text-orange-300">Total Goals</div>
+              </div>
+            </div>
+
+            {/* Recent Goals */}
+            {activeGoals.length > 0 ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold text-slate-800 dark:text-slate-200">Recent Goals</h4>
+                  <Button
+                    onClick={() => setShowGoalModal(true)}
+                    variant="outline"
+                    size="sm"
+                    className="border-2 border-purple-300 hover:bg-gradient-to-r hover:from-purple-500 hover:to-pink-600 hover:text-white hover:border-transparent transition-all duration-300"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Goal
+                  </Button>
+                </div>
+                
+                <div className="space-y-3">
+                  {activeGoals.slice(0, 3).map((goal) => {
+                    const progress = (goal.currentAmount / goal.targetAmount) * 100;
+                    return (
+                      <div
+                        key={goal.id}
+                        className="p-4 border-2 border-slate-200 dark:border-slate-700 rounded-2xl hover:bg-gradient-to-r hover:from-slate-50 hover:to-purple-50 dark:hover:from-slate-800 dark:hover:to-purple-900/20 transition-all duration-300"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">{getGoalIcon(goal.type)}</span>
+                            <div>
+                              <h5 className="font-semibold text-slate-800 dark:text-slate-200">{goal.title}</h5>
+                              <p className="text-sm text-slate-600 dark:text-slate-400 capitalize">{goal.type} • {goal.period}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditGoal(goal)}
+                              className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                            >
+                              <Edit3 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-600 dark:text-slate-400">Progress</span>
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">
+                              {progress.toFixed(1)}%
+                            </span>
+                          </div>
+                          <Progress value={Math.min(100, progress)} className="h-2" />
+                          <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
+                            <span>${goal.currentAmount.toFixed(2)}</span>
+                            <span>${goal.targetAmount.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 flex items-center justify-center mx-auto mb-4">
+                  <Target className="h-8 w-8 text-purple-500" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2">No Goals Set</h3>
+                <p className="text-slate-600 dark:text-slate-400 mb-4">
+                  Start your financial journey by setting your first goal
+                </p>
+                <Button
+                  onClick={() => setShowGoalModal(true)}
+                  className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Set Your First Goal
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* External API Integration Status */}
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="gradient-card border-2 border-dashed border-blue-300 dark:border-blue-600 hover:border-blue-500 transition-all duration-300 hover:shadow-2xl transform hover:-translate-y-1">
@@ -334,77 +496,23 @@ export function Settings({ user, onLogout, onUpdateUser }: SettingsProps) {
         </CardContent>
       </Card>
 
-      {/* Integration Documentation */}
-      <Card className="gradient-card hover:shadow-2xl transition-all duration-300 border-0">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-3 text-2xl">
-            <div className="p-3 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600">
-              <Sparkles className="h-6 w-6 text-white" />
-            </div>
-            <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              External API Integration Guide
-            </span>
-          </CardTitle>
-          <CardDescription className="text-base">
-            How to enable advanced features with external services
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6 text-sm">
-            <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl border border-blue-200 dark:border-blue-700">
-              <h4 className="font-semibold mb-3 text-blue-800 dark:text-blue-200 flex items-center gap-2">
-                <Brain className="h-4 w-4" />
-                OpenAI Integration
-              </h4>
-              <p className="text-blue-700 dark:text-blue-300 mb-3">
-                To enable AI financial insights, you'll need to:
-              </p>
-              <ul className="list-disc list-inside text-blue-600 dark:text-blue-400 space-y-2">
-                <li>Create an OpenAI account and get your API key</li>
-                <li>Add the API key to your environment variables</li>
-                <li>Configure the AI analysis endpoints</li>
-              </ul>
-            </div>
-            
-            <div className="p-6 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-700">
-              <h4 className="font-semibold mb-3 text-emerald-800 dark:text-emerald-200 flex items-center gap-2">
-                <Video className="h-4 w-4" />
-                Tavus Video API
-              </h4>
-              <p className="text-emerald-700 dark:text-emerald-300 mb-3">
-                For interactive video advisor features:
-              </p>
-              <ul className="list-disc list-inside text-emerald-600 dark:text-emerald-400 space-y-2">
-                <li>Sign up for Tavus API access</li>
-                <li>Create your AI avatar and conversation flows</li>
-                <li>Integrate the video widget into the dashboard</li>
-              </ul>
-            </div>
-            
-            <div className="p-6 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-2xl border border-orange-200 dark:border-orange-700">
-              <h4 className="font-semibold mb-3 text-orange-800 dark:text-orange-200 flex items-center gap-2">
-                <Mic className="h-4 w-4" />
-                ElevenLabs Voice
-              </h4>
-              <p className="text-orange-700 dark:text-orange-300 mb-3">
-                To enable voice expense tracking:
-              </p>
-              <ul className="list-disc list-inside text-orange-600 dark:text-orange-400 space-y-2">
-                <li>Get your ElevenLabs API credentials</li>
-                <li>Set up speech-to-text processing</li>
-                <li>Configure natural language expense parsing</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Edit Profile Modal */}
       <EditProfileModal
         isOpen={showEditProfile}
         onClose={() => setShowEditProfile(false)}
         user={user}
         onUpdateUser={onUpdateUser}
+      />
+
+      {/* Goal Setting Modal */}
+      <GoalSettingModal
+        isOpen={showGoalModal}
+        onClose={() => {
+          setShowGoalModal(false);
+          setEditingGoal(null);
+        }}
+        onSaveGoal={handleSaveGoal}
+        editingGoal={editingGoal}
       />
     </div>
   );

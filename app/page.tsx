@@ -143,7 +143,17 @@ export default function Home() {
       case 'reports':
         return <Reports expenses={expenses} />;
       case 'settings':
-        return <Settings user={user} onLogout={handleLogout} onUpdateUser={handleUpdateUser} />;
+        return (
+          <Settings 
+            user={user} 
+            onLogout={handleLogout} 
+            onUpdateUser={handleUpdateUser}
+            goals={goals}
+            onAddGoal={handleAddGoal}
+            onUpdateGoal={handleUpdateGoal}
+            onDeleteGoal={handleDeleteGoal}
+          />
+        );
       default:
         return <Dashboard expenses={expenses} user={user} goals={goals} />;
     }
