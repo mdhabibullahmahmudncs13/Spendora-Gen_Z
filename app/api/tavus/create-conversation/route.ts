@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     if (!apiKey || apiKey === '' || apiKey.length < 10 || !replicaId || !personaId) {
       console.error('Tavus API Key validation failed:', { 
         exists: !!apiKey, 
-        isPlaceholder: apiKey === 'ycc962bed878e4653825876d524a8cb43',
+        isPlaceholder: apiKey === 'cc962bed878e4653825876d524a8cb43',
         length: apiKey?.length || 0
       });
       return NextResponse.json(
