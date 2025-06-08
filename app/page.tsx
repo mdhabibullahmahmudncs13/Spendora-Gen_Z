@@ -12,6 +12,9 @@ import { Header } from '@/components/header';
 import { AuthModal } from '@/components/auth-modal';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { Expense, User, FinancialGoal, Bill } from '@/types';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -134,6 +137,16 @@ export default function Home() {
   if (!user) {
     return (
       <div className="min-h-screen bg-background">
+        {/* Back to Landing Button */}
+        <div className="absolute top-4 left-4 z-50">
+          <Link href="/landing">
+            <Button variant="ghost" className="hover:bg-white/20 dark:hover:bg-slate-800/50">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Home
+            </Button>
+          </Link>
+        </div>
+        
         <AuthModal
           isOpen={showAuthModal}
           onClose={() => setShowAuthModal(false)}
