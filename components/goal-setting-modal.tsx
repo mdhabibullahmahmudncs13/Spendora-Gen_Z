@@ -84,6 +84,11 @@ export function GoalSettingModal({ isOpen, onClose, onSaveGoal, editingGoal }: G
     }
   };
 
+  const handleCategoryChange = (value: string) => {
+    // Convert "none" back to empty string for internal state
+    setCategory(value === 'none' ? '' : value);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -204,12 +209,12 @@ export function GoalSettingModal({ isOpen, onClose, onSaveGoal, editingGoal }: G
               <Label htmlFor="goal-category" className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                 Category (Optional)
               </Label>
-              <Select value={category} onValueChange={setCategory}>
+              <Select value={category || 'none'} onValueChange={handleCategoryChange}>
                 <SelectTrigger className="h-12 border-2 border-slate-200 dark:border-slate-700 focus:border-purple-500 transition-colors duration-300">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No specific category</SelectItem>
+                  <SelectItem value="none">No specific category</SelectItem>
                   {EXPENSE_CATEGORIES.map((cat) => (
                     <SelectItem key={cat} value={cat}>
                       {cat}
