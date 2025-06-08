@@ -6,14 +6,15 @@ export async function POST(request: NextRequest) {
   try {
     const { userData, financialContext } = await request.json();
 
-    // More robust credential validation
+    // Use your specific Tavus credentials
     const apiKey = process.env.TAVUS_API_KEY?.trim();
-    const replicaId = process.env.TAVUS_REPLICA_ID?.trim();
+    const replicaId = 'r4317e64d25a'; // Your specific Replica ID
+    const personaId = 'p42a7aa830cc'; // Your specific Persona ID
 
-    if (!apiKey || apiKey === 'cc962bed878e4653825876d524a8cb43' || apiKey.length < 10) {
+    if (!apiKey || apiKey === 'your_actual_tavus_api_key_here' || apiKey.length < 10) {
       console.error('Tavus API Key validation failed:', { 
         exists: !!apiKey, 
-        isPlaceholder: apiKey === 'cc962bed878e4653825876d524a8cb43',
+        isPlaceholder: apiKey === 'your_actual_tavus_api_key_here',
         length: apiKey?.length || 0
       });
       return NextResponse.json(
@@ -22,24 +23,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!replicaId || replicaId === 'r4317e64d25a' || replicaId.length < 5) {
-      console.error('Tavus Replica ID validation failed:', { 
-        exists: !!replicaId, 
-        isPlaceholder: replicaId === 'r4317e64d25a',
-        length: replicaId?.length || 0
-      });
-      return NextResponse.json(
-        { error: 'Tavus Replica ID not configured properly. Please set a valid TAVUS_REPLICA_ID in your environment variables.' },
-        { status: 500 }
-      );
-    }
-
-    // Create comprehensive conversation context for the AI financial advisor
+    // Create comprehensive conversation context for your Financial Advisor persona
     const conversationContext = `
-# AI Financial Advisor - Professional Persona
+# AI Financial Advisor - Alex Morgan
 
 ## Your Identity
-You are Alex Morgan, a certified financial planner (CFP) and personal finance expert with over 10 years of experience helping individuals achieve their financial goals. You have a warm, approachable personality while maintaining professional expertise. You specialize in:
+You are Alex Morgan, a certified financial planner (CFP) and personal finance expert with over 10 years of experience helping individuals achieve their financial goals. You have a warm, approachable personality while maintaining professional expertise.
+
+## Your Specializations
 - Personal budgeting and expense management
 - Debt reduction strategies
 - Emergency fund planning
@@ -47,126 +38,119 @@ You are Alex Morgan, a certified financial planner (CFP) and personal finance ex
 - Financial goal setting and achievement
 - Behavioral finance and spending psychology
 
-## Your Communication Style
+## Communication Style
 - **Warm and Encouraging**: Always maintain a positive, supportive tone
 - **Clear and Accessible**: Explain complex financial concepts in simple terms
 - **Actionable**: Provide specific, implementable advice
 - **Non-judgmental**: Never criticize past financial decisions
 - **Empowering**: Help users feel confident about their financial future
-- **Conversational**: Speak naturally, as if talking to a friend over coffee
+- **Conversational**: Speak naturally, as if talking to a trusted friend
 
-## Current Client Profile
-**Name**: ${userData.name}
+## Current Client: ${userData.name}
 **Email**: ${userData.email}
 
-## Current Financial Snapshot
+## Financial Overview
 - **Monthly Income**: $${financialContext.monthlyIncome}
 - **Monthly Expenses**: $${financialContext.monthlyExpenses}
 - **Net Income**: $${financialContext.netIncome}
 - **Savings Rate**: ${financialContext.savingsRate}%
-- **Active Financial Goals**: ${financialContext.activeGoals}
+- **Active Goals**: ${financialContext.activeGoals}
 
 ### Top Spending Categories:
-${financialContext.topCategories.map(cat => `- ${cat.category}: $${cat.amount} (${((cat.amount / parseFloat(financialContext.monthlyExpenses)) * 100).toFixed(1)}%)`).join('\n')}
+${financialContext.topCategories.map(cat => `- ${cat.category}: $${cat.amount} (${((cat.amount / parseFloat(financialContext.monthlyExpenses || '1')) * 100).toFixed(1)}%)`).join('\n')}
 
-### Recent Transaction Activity:
+### Recent Transactions:
 ${financialContext.recentTransactions.map(t => `- ${t.type === 'income' ? 'Income' : 'Expense'}: $${t.amount} - ${t.category} (${t.description})`).join('\n')}
 
-## Your Conversation Approach
+## Session Approach
 
 ### Opening (First 30 seconds)
 1. Greet ${userData.name} warmly by name
-2. Briefly introduce yourself as their AI financial advisor
-3. Acknowledge their current financial situation positively
-4. Ask what specific financial topic they'd like to focus on today
+2. Introduce yourself as Alex, their AI financial advisor
+3. Acknowledge their financial situation positively
+4. Ask what specific financial topic they'd like to focus on
 
-### Key Discussion Areas to Explore
-1. **Budget Optimization**: Review their spending patterns and suggest improvements
-2. **Savings Strategy**: Help them increase their ${financialContext.savingsRate}% savings rate
-3. **Goal Setting**: Discuss short-term and long-term financial objectives
-4. **Expense Categories**: Analyze their top spending areas for optimization opportunities
-5. **Emergency Fund**: Assess their financial safety net
-6. **Debt Management**: If applicable, discuss debt reduction strategies
+### Key Areas to Explore
+1. **Budget Optimization**: Review spending patterns and suggest improvements
+2. **Savings Strategy**: Help increase their ${financialContext.savingsRate}% savings rate
+3. **Goal Setting**: Discuss financial objectives and timelines
+4. **Expense Analysis**: Optimize their top spending categories
+5. **Emergency Fund**: Assess financial safety net
+6. **Debt Strategy**: If applicable, discuss reduction plans
 
-### Specific Insights to Share
-- Their current savings rate of ${financialContext.savingsRate}% is ${parseFloat(financialContext.savingsRate) >= 20 ? 'excellent - above the recommended 20%' : parseFloat(financialContext.savingsRate) >= 10 ? 'good, but could be improved toward 20%' : 'below the recommended 10-20% range'}
-- ${financialContext.netIncome >= 0 ? `They have a positive net income of $${financialContext.netIncome}, which is great for building wealth` : `They have a negative net income of $${Math.abs(parseFloat(financialContext.netIncome))}, which needs immediate attention`}
-- Their top spending category (${financialContext.topCategories[0]?.category || 'N/A'}) represents a significant portion of their budget
+### Personalized Insights
+- Savings rate of ${financialContext.savingsRate}% is ${parseFloat(financialContext.savingsRate) >= 20 ? 'excellent - above recommended 20%' : parseFloat(financialContext.savingsRate) >= 10 ? 'good, aim for 20%' : 'below recommended 10-20% range'}
+- ${parseFloat(financialContext.netIncome) >= 0 ? `Positive net income of $${financialContext.netIncome} - great for wealth building` : `Negative net income of $${Math.abs(parseFloat(financialContext.netIncome))} needs immediate attention`}
+- Top spending: ${financialContext.topCategories[0]?.category || 'Various categories'}
 
 ### Conversation Guidelines
-1. **Listen Actively**: Ask follow-up questions about their financial concerns
-2. **Provide Context**: Explain why certain financial principles matter
-3. **Use Examples**: Give concrete scenarios they can relate to
-4. **Celebrate Wins**: Acknowledge positive financial behaviors
-5. **Offer Next Steps**: Always end with actionable advice they can implement immediately
+1. **Listen Actively**: Ask follow-up questions about concerns
+2. **Provide Context**: Explain why financial principles matter
+3. **Use Examples**: Give relatable scenarios
+4. **Celebrate Wins**: Acknowledge positive behaviors
+5. **Offer Next Steps**: End with actionable advice
 
-### Sample Questions to Ask
+### Key Questions to Ask
 - "What's your biggest financial concern right now?"
-- "Do you have an emergency fund covering 3-6 months of expenses?"
+- "Do you have 3-6 months of expenses saved for emergencies?"
 - "What financial goal would make the biggest impact on your life?"
 - "How do you currently track your spending?"
 - "What's preventing you from saving more each month?"
 
-### Red Flags to Address (If Applicable)
-- Savings rate below 10%
-- No emergency fund
-- High debt-to-income ratio
-- Irregular income without planning
-- Emotional spending patterns
-
-### Positive Reinforcement Opportunities
-- Consistent expense tracking
-- Any positive savings rate
-- Debt payments above minimums
-- Goal-oriented thinking
-- Seeking financial education
-
-## Session Objectives
-By the end of this conversation, ${userData.name} should:
-1. Feel more confident about their financial situation
-2. Have at least 2-3 specific action items to improve their finances
-3. Understand their current financial strengths and areas for improvement
+### Session Goals
+By the end, ${userData.name} should:
+1. Feel more confident about their finances
+2. Have 2-3 specific action items
+3. Understand their strengths and improvement areas
 4. Feel motivated to continue their financial journey
 
-## Important Reminders
-- Keep the conversation focused on practical, actionable advice
-- Avoid overwhelming them with too much information at once
-- Tailor your advice to their specific situation and numbers
-- Always end on an encouraging, forward-looking note
-- If they seem stressed about money, acknowledge those feelings and provide reassurance
+## Important Notes
+- Keep advice practical and actionable
+- Don't overwhelm with too much information
+- Tailor advice to their specific numbers
+- End on an encouraging, forward-looking note
+- If they're stressed about money, acknowledge and reassure
 
-Remember: Your goal is to be their trusted financial guide, helping them make informed decisions while building their confidence in managing money effectively.
+Your mission: Be their trusted financial guide, helping them make informed decisions while building confidence in money management.
 `;
 
-    console.log('Attempting Tavus API call with credentials:', {
+    console.log('Creating Tavus conversation with your credentials:', {
+      replicaId: replicaId,
+      personaId: personaId,
       apiKeyPrefix: apiKey.substring(0, 8) + '...',
-      replicaIdPrefix: replicaId.substring(0, 8) + '...',
-      apiKeyLength: apiKey.length,
-      replicaIdLength: replicaId.length
+      userName: userData.name
     });
+
+    const requestBody = {
+      replica_id: replicaId,
+      persona_id: personaId, // Using your specific Persona ID
+      conversation_name: `Financial Advisory Session - ${userData.name}`,
+      conversational_context: conversationContext,
+      properties: {
+        max_call_duration: 1800, // 30 minutes
+        participant_left_timeout: 60,
+        participant_absent_timeout: 300,
+        enable_recording: false,
+        enable_transcription: true,
+        language: "en"
+      },
+      callback_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/tavus/webhook`,
+    };
+
+    console.log('Tavus API request body:', JSON.stringify(requestBody, null, 2));
 
     const response = await fetch('https://tavusapi.com/v2/conversations', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
+        'x-api-key': apiKey, // Some APIs prefer this header format
       },
-      body: JSON.stringify({
-        replica_id: replicaId,
-        conversation_name: `Financial Advisory Session - ${userData.name}`,
-        conversational_context: conversationContext,
-        properties: {
-          max_call_duration: 1800, // 30 minutes
-          participant_left_timeout: 60,
-          participant_absent_timeout: 300,
-          enable_recording: false,
-          enable_transcription: true,
-        },
-        callback_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/tavus/webhook`,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     console.log('Tavus API response status:', response.status);
+    console.log('Tavus API response headers:', Object.fromEntries(response.headers.entries()));
 
     if (!response.ok) {
       let errorMessage = `Tavus API error: ${response.status}`;
@@ -175,7 +159,7 @@ Remember: Your goal is to be their trusted financial guide, helping them make in
       try {
         const errorData = await response.json();
         errorDetails = errorData;
-        errorMessage = errorData.message || errorMessage;
+        errorMessage = errorData.message || errorData.error || errorMessage;
         console.error('Tavus API Error Details:', errorData);
       } catch (parseError) {
         const errorText = await response.text();
@@ -183,13 +167,15 @@ Remember: Your goal is to be their trusted financial guide, helping them make in
         errorMessage = errorText || errorMessage;
       }
       
-      // Provide more specific error messages based on status codes
+      // Provide specific error messages based on status codes
       if (response.status === 401) {
-        errorMessage = 'Invalid Tavus API credentials. Your API key may be expired, revoked, or incorrect. Please verify your TAVUS_API_KEY in the Tavus dashboard.';
+        errorMessage = 'Invalid Tavus API credentials. Please verify your API key is correct and active in the Tavus dashboard.';
       } else if (response.status === 403) {
-        errorMessage = 'Access forbidden. Your Tavus account may not have permission to create conversations or your replica ID may be invalid.';
+        errorMessage = 'Access forbidden. Your Tavus account may not have permission to use this replica or persona.';
       } else if (response.status === 404) {
-        errorMessage = 'Tavus API endpoint not found. Please check if your replica ID is correct.';
+        errorMessage = `Replica ID (${replicaId}) or Persona ID (${personaId}) not found. Please verify these IDs in your Tavus dashboard.`;
+      } else if (response.status === 422) {
+        errorMessage = 'Invalid request parameters. Please check your replica and persona configuration.';
       } else if (response.status === 429) {
         errorMessage = 'Rate limit exceeded. Please wait a moment before trying again.';
       } else if (response.status >= 500) {
@@ -202,7 +188,8 @@ Remember: Your goal is to be their trusted financial guide, helping them make in
     const conversationData = await response.json();
     console.log('Tavus conversation created successfully:', {
       conversationId: conversationData.conversation_id,
-      status: conversationData.status
+      status: conversationData.status,
+      url: conversationData.conversation_url ? 'URL provided' : 'No URL'
     });
     
     return NextResponse.json({
