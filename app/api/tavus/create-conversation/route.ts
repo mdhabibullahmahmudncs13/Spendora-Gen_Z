@@ -6,16 +6,16 @@ export async function POST(request: NextRequest) {
   try {
     const { userData, financialContext } = await request.json();
 
-    if (!process.env.TAVUS_API_KEY) {
+    if (!process.env.TAVUS_API_KEY || process.env.TAVUS_API_KEY === 'your_actual_tavus_api_key_here') {
       return NextResponse.json(
-        { error: 'Tavus API key not configured' },
+        { error: 'Tavus API key not configured. Please set TAVUS_API_KEY in your environment variables.' },
         { status: 500 }
       );
     }
 
-    if (!process.env.TAVUS_REPLICA_ID) {
+    if (!process.env.TAVUS_REPLICA_ID || process.env.TAVUS_REPLICA_ID === 'your_actual_tavus_replica_id_here') {
       return NextResponse.json(
-        { error: 'Tavus Replica ID not configured' },
+        { error: 'Tavus Replica ID not configured. Please set TAVUS_REPLICA_ID in your environment variables.' },
         { status: 500 }
       );
     }
@@ -59,9 +59,22 @@ Provide personalized, actionable financial advice. Be conversational, encouragin
     });
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error('Tavus API Error:', errorData);
-      throw new Error(`Tavus API error: ${response.status}`);
+      let errorMessage = `Tavus API error: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+        console.error('Tavus API Error:', errorData);
+      } catch (parseError) {
+        const errorText = await response.text();
+        console.error('Tavus API Error (text):', errorText);
+        errorMessage = errorText || errorMessage;
+      }
+      
+      if (response.status === 401) {
+        errorMessage = 'Invalid Tavus API credentials. Please check your TAVUS_API_KEY and TAVUS_REPLICA_ID.';
+      }
+      
+      throw new Error(errorMessage);
     }
 
     const conversationData = await response.json();

@@ -114,8 +114,20 @@ export function VideoAdvisorModal({ isOpen, onClose, user, expenses }: VideoAdvi
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.details || 'Failed to create video session');
+        let errorMessage = 'Failed to create video session';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.details || errorData.error || errorMessage;
+        } catch (parseError) {
+          // If we can't parse JSON, it might be an HTML error page
+          const errorText = await response.text();
+          if (errorText.includes('<!DOCTYPE')) {
+            errorMessage = 'Server error occurred. Please check your configuration and try again.';
+          } else {
+            errorMessage = errorText || errorMessage;
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -126,7 +138,8 @@ export function VideoAdvisorModal({ isOpen, onClose, user, expenses }: VideoAdvi
       toast.success('Video session started! 🎥');
     } catch (error) {
       console.error('Video call error:', error);
-      setConnectionError(error instanceof Error ? error.message : 'Failed to start video call');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to start video call';
+      setConnectionError(errorMessage);
       toast.error('Failed to start video session');
     } finally {
       setIsConnecting(false);
@@ -228,7 +241,12 @@ export function VideoAdvisorModal({ isOpen, onClose, user, expenses }: VideoAdvi
                         <AlertCircle className="h-10 w-10 text-white" />
                       </div>
                       <p className="text-red-700 dark:text-red-300 font-medium mb-2">Connection Failed</p>
-                      <p className="text-sm text-red-600 dark:text-red-400 max-w-md">{connectionError}</p>
+                      <p className="text-sm text-red-600 dark:text-red-400 max-w-md mx-auto">{connectionError}</p>
+                      {connectionError.includes('credentials') && (
+                        <p className="text-xs text-red-500 dark:text-red-400 mt-2 max-w-md mx-auto">
+                          Please configure your Tavus API credentials in the .env.local file
+                        </p>
+                      )}
                     </>
                   ) : (
                     <>
@@ -322,7 +340,7 @@ export function VideoAdvisorModal({ isOpen, onClose, user, expenses }: VideoAdvi
                     isCameraOff 
                       ? 'bg-red-500 border-red-500 text-white hover:bg-red-600' 
                       : 'border-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
+                    }`}
                 >
                   {isCameraOff ? <CameraOff className="h-5 w-5" /> : <Camera className="h-5 w-5" />}
                 </Button>
