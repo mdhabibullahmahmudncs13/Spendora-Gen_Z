@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { User, FinancialGoal } from '@/types';
-import { Settings as SettingsIcon, User as UserIcon, LogOut, Video, Mic, Brain, Sparkles, Shield, Zap, Edit3, Moon, Sun, Bell, DollarSign, Target, Plus, CheckCircle, Calendar } from 'lucide-react';
+import { Settings as SettingsIcon, User as UserIcon, LogOut, Video, Mic, Brain, Sparkles, Shield, Zap, Edit3, Moon, Sun, Bell, DollarSign, Target, Plus, CheckCircle, Calendar, Globe } from 'lucide-react';
 import { EditProfileModal } from '@/components/edit-profile-modal';
 import { GoalSettingModal } from '@/components/goal-setting-modal';
 import { useTheme } from 'next-themes';
@@ -24,6 +24,35 @@ interface SettingsProps {
   onUpdateGoal?: (id: string, goal: Omit<FinancialGoal, 'id' | 'createdAt'>) => void;
   onDeleteGoal?: (id: string) => void;
 }
+
+// Currency options with symbols and names
+const CURRENCY_OPTIONS = [
+  { code: 'USD', symbol: '$', name: 'US Dollar', flag: '🇺🇸' },
+  { code: 'EUR', symbol: '€', name: 'Euro', flag: '🇪🇺' },
+  { code: 'GBP', symbol: '£', name: 'British Pound', flag: '🇬🇧' },
+  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar', flag: '🇨🇦' },
+  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar', flag: '🇦🇺' },
+  { code: 'JPY', symbol: '¥', name: 'Japanese Yen', flag: '🇯🇵' },
+  { code: 'CHF', symbol: 'CHF', name: 'Swiss Franc', flag: '🇨🇭' },
+  { code: 'CNY', symbol: '¥', name: 'Chinese Yuan', flag: '🇨🇳' },
+  { code: 'INR', symbol: '₹', name: 'Indian Rupee', flag: '🇮🇳' },
+  { code: 'KRW', symbol: '₩', name: 'South Korean Won', flag: '🇰🇷' },
+  { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar', flag: '🇸🇬' },
+  { code: 'HKD', symbol: 'HK$', name: 'Hong Kong Dollar', flag: '🇭🇰' },
+  { code: 'SEK', symbol: 'kr', name: 'Swedish Krona', flag: '🇸🇪' },
+  { code: 'NOK', symbol: 'kr', name: 'Norwegian Krone', flag: '🇳🇴' },
+  { code: 'DKK', symbol: 'kr', name: 'Danish Krone', flag: '🇩🇰' },
+  { code: 'PLN', symbol: 'zł', name: 'Polish Złoty', flag: '🇵🇱' },
+  { code: 'CZK', symbol: 'Kč', name: 'Czech Koruna', flag: '🇨🇿' },
+  { code: 'HUF', symbol: 'Ft', name: 'Hungarian Forint', flag: '🇭🇺' },
+  { code: 'RUB', symbol: '₽', name: 'Russian Ruble', flag: '🇷🇺' },
+  { code: 'BRL', symbol: 'R$', name: 'Brazilian Real', flag: '🇧🇷' },
+  { code: 'MXN', symbol: '$', name: 'Mexican Peso', flag: '🇲🇽' },
+  { code: 'ZAR', symbol: 'R', name: 'South African Rand', flag: '🇿🇦' },
+  { code: 'TRY', symbol: '₺', name: 'Turkish Lira', flag: '🇹🇷' },
+  { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham', flag: '🇦🇪' },
+  { code: 'SAR', symbol: '﷼', name: 'Saudi Riyal', flag: '🇸🇦' },
+];
 
 export function Settings({ user, onLogout, onUpdateUser, goals = [], onAddGoal, onUpdateGoal, onDeleteGoal }: SettingsProps) {
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -41,7 +70,8 @@ export function Settings({ user, onLogout, onUpdateUser, goals = [], onAddGoal, 
 
   const handleCurrencyChange = (newCurrency: string) => {
     setCurrency(newCurrency);
-    toast.success(`Currency changed to ${newCurrency}`);
+    const selectedCurrency = CURRENCY_OPTIONS.find(c => c.code === newCurrency);
+    toast.success(`Currency changed to ${selectedCurrency?.name} (${selectedCurrency?.symbol})`);
   };
 
   const handleThemeChange = (newTheme: string) => {
@@ -82,6 +112,8 @@ export function Settings({ user, onLogout, onUpdateUser, goals = [], onAddGoal, 
       default: return '🎯';
     }
   };
+
+  const selectedCurrency = CURRENCY_OPTIONS.find(c => c.code === currency);
 
   return (
     <div className="space-y-8 p-6">
@@ -162,9 +194,12 @@ export function Settings({ user, onLogout, onUpdateUser, goals = [], onAddGoal, 
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-2xl border border-orange-200 dark:border-orange-700">
-                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Currency</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Currency</span>
+                    <span className="text-lg">{selectedCurrency?.flag}</span>
+                  </div>
                   <Badge variant="outline" className="bg-gradient-to-r from-orange-100 to-red-100 text-orange-700 border-orange-200">
-                    {currency} ({currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '£'})
+                    {selectedCurrency?.code} ({selectedCurrency?.symbol})
                   </Badge>
                 </div>
                 <Button 
@@ -218,22 +253,65 @@ export function Settings({ user, onLogout, onUpdateUser, goals = [], onAddGoal, 
                 <div className="space-y-3">
                   <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
                     <div className="p-1 rounded-lg bg-gradient-to-r from-orange-500 to-red-600">
-                      <DollarSign className="h-3 w-3 text-white" />
+                      <Globe className="h-3 w-3 text-white" />
                     </div>
-                    Currency
+                    Currency & Region
                   </Label>
+                  
+                  {/* Current Currency Display */}
+                  <div className="p-4 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-2xl border border-orange-200 dark:border-orange-700">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-medium text-orange-800 dark:text-orange-200">Current Currency</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{selectedCurrency?.flag}</span>
+                        <Badge variant="outline" className="bg-white/50 text-orange-700 border-orange-300">
+                          {selectedCurrency?.symbol}
+                        </Badge>
+                      </div>
+                    </div>
+                    <p className="text-lg font-bold text-orange-900 dark:text-orange-100">
+                      {selectedCurrency?.name}
+                    </p>
+                  </div>
+
+                  {/* Currency Selector */}
                   <Select value={currency} onValueChange={handleCurrencyChange}>
                     <SelectTrigger className="h-12 border-2 border-slate-200 dark:border-slate-700 focus:border-orange-500 transition-colors duration-300">
-                      <SelectValue />
+                      <SelectValue>
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg">{selectedCurrency?.flag}</span>
+                          <span>{selectedCurrency?.code} - {selectedCurrency?.name}</span>
+                          <Badge variant="secondary" className="ml-auto">
+                            {selectedCurrency?.symbol}
+                          </Badge>
+                        </div>
+                      </SelectValue>
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="USD">USD ($)</SelectItem>
-                      <SelectItem value="EUR">EUR (€)</SelectItem>
-                      <SelectItem value="GBP">GBP (£)</SelectItem>
-                      <SelectItem value="CAD">CAD (C$)</SelectItem>
-                      <SelectItem value="AUD">AUD (A$)</SelectItem>
+                    <SelectContent className="max-h-60">
+                      {CURRENCY_OPTIONS.map((curr) => (
+                        <SelectItem key={curr.code} value={curr.code} className="hover:bg-orange-50 dark:hover:bg-orange-900/20">
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3">
+                              <span className="text-lg">{curr.flag}</span>
+                              <div>
+                                <span className="font-medium">{curr.code}</span>
+                                <span className="text-sm text-slate-500 ml-2">{curr.name}</span>
+                              </div>
+                            </div>
+                            <Badge variant="outline" className="ml-4">
+                              {curr.symbol}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+                  
+                  {/* Currency Info */}
+                  <div className="text-xs text-slate-500 dark:text-slate-400 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                    💡 All amounts in the app will be displayed using your selected currency format. 
+                    Exchange rates are not automatically converted - enter amounts in your preferred currency.
+                  </div>
                 </div>
 
                 <div className="flex gap-3 pt-4">
@@ -349,8 +427,8 @@ export function Settings({ user, onLogout, onUpdateUser, goals = [], onAddGoal, 
                           </div>
                           <Progress value={Math.min(100, progress)} className="h-2" />
                           <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
-                            <span>${goal.currentAmount.toFixed(2)}</span>
-                            <span>${goal.targetAmount.toFixed(2)}</span>
+                            <span>{selectedCurrency?.symbol}{goal.currentAmount.toFixed(2)}</span>
+                            <span>{selectedCurrency?.symbol}{goal.targetAmount.toFixed(2)}</span>
                           </div>
                         </div>
                       </div>
