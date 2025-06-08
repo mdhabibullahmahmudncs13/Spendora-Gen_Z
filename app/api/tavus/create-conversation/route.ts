@@ -156,15 +156,19 @@ Your mission: Be their trusted financial guide, helping them make informed decis
       let errorMessage = `Tavus API error: ${response.status}`;
       let errorDetails = {};
       
+      // Read the response body once as text
+      const responseText = await response.text();
+      
       try {
-        const errorData = await response.json();
+        // Try to parse the text as JSON
+        const errorData = JSON.parse(responseText);
         errorDetails = errorData;
         errorMessage = errorData.message || errorData.error || errorMessage;
         console.error('Tavus API Error Details:', errorData);
       } catch (parseError) {
-        const errorText = await response.text();
-        console.error('Tavus API Error (text):', errorText);
-        errorMessage = errorText || errorMessage;
+        // If JSON parsing fails, use the raw text
+        console.error('Tavus API Error (text):', responseText);
+        errorMessage = responseText || errorMessage;
       }
       
       // Provide specific error messages based on status codes
