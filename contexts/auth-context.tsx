@@ -1,3 +1,5 @@
+'use client';
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { UserData, getCurrentUser, login, logout, createAccount, updateUserPreferences } from '@/lib/auth';
 
@@ -104,4 +106,4 @@ export function useAuth() {
         throw new Error('useAuth must be used within an AuthProvider');
     }
     return context;
-} 
+}

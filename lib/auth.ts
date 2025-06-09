@@ -1,5 +1,5 @@
 import { account, databases, DATABASE_ID, COLLECTIONS } from './appwrite';
-import { ID } from 'appwrite';
+import { ID, Query } from 'appwrite';
 
 export interface UserData {
     id: string;
@@ -65,7 +65,7 @@ export async function login(email: string, password: string): Promise<UserData> 
         const preferences = await databases.listDocuments(
             DATABASE_ID,
             COLLECTIONS.USERS,
-            [databases.queries.equal('userId', user.$id)]
+            [Query.equal('userId', user.$id)]
         );
 
         const userPrefs = preferences.documents[0];
@@ -101,7 +101,7 @@ export async function getCurrentUser(): Promise<UserData | null> {
         const preferences = await databases.listDocuments(
             DATABASE_ID,
             COLLECTIONS.USERS,
-            [databases.queries.equal('userId', user.$id)]
+            [Query.equal('userId', user.$id)]
         );
 
         const userPrefs = preferences.documents[0];
@@ -133,7 +133,7 @@ export async function updateUserPreferences(
         const userDocs = await databases.listDocuments(
             DATABASE_ID,
             COLLECTIONS.USERS,
-            [databases.queries.equal('userId', userId)]
+            [Query.equal('userId', userId)]
         );
 
         if (userDocs.documents.length > 0) {
@@ -154,4 +154,4 @@ export async function updateUserPreferences(
         console.error('Update preferences error:', error);
         throw error;
     }
-} 
+}

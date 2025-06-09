@@ -7,18 +7,20 @@ export interface User {
 
 export interface Expense {
   id: string;
+  userId?: string; // Made optional for compatibility
   amount: number;
   category: string;
   description: string;
   date: string;
-  type: 'income' | 'expense'; // Added transaction type
+  type: 'income' | 'expense';
   createdAt: string;
 }
 
 export interface FinancialGoal {
   id: string;
+  userId?: string; // Made optional for compatibility
   title: string;
-  description: string;
+  description?: string;
   targetAmount: number;
   currentAmount: number;
   category?: string;

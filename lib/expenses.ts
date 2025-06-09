@@ -9,14 +9,25 @@ export async function createExpense(expense: Omit<Expense, 'id'>): Promise<Expen
             COLLECTIONS.EXPENSES,
             ID.unique(),
             {
-                ...expense,
+                userId: expense.userId || '',
+                amount: expense.amount,
+                category: expense.category,
+                description: expense.description,
                 date: new Date(expense.date).toISOString(),
+                type: expense.type,
+                createdAt: new Date(expense.createdAt).toISOString(),
             }
         );
 
         return {
             id: response.$id,
-            ...expense,
+            userId: response.userId,
+            amount: response.amount,
+            category: response.category,
+            description: response.description,
+            date: response.date,
+            type: response.type,
+            createdAt: response.createdAt,
         };
     } catch (error) {
         console.error('Create expense error:', error);
@@ -34,6 +45,7 @@ export async function getExpenses(userId: string, options?: {
     try {
         const queries: string[] = [
             Query.equal('userId', userId),
+            Query.orderDesc('date'),
         ];
 
         if (options?.startDate) {
@@ -70,8 +82,7 @@ export async function getExpenses(userId: string, options?: {
             category: doc.category,
             description: doc.description,
             date: doc.date,
-            attachments: doc.attachments || [],
-            tags: doc.tags || [],
+            createdAt: doc.createdAt,
         }));
     } catch (error) {
         console.error('Get expenses error:', error);
@@ -81,14 +92,19 @@ export async function getExpenses(userId: string, options?: {
 
 export async function updateExpense(id: string, expense: Partial<Expense>): Promise<Expense> {
     try {
+        const updateData: any = {};
+        
+        if (expense.amount !== undefined) updateData.amount = expense.amount;
+        if (expense.category !== undefined) updateData.category = expense.category;
+        if (expense.description !== undefined) updateData.description = expense.description;
+        if (expense.type !== undefined) updateData.type = expense.type;
+        if (expense.date !== undefined) updateData.date = new Date(expense.date).toISOString();
+
         const response = await databases.updateDocument(
             DATABASE_ID,
             COLLECTIONS.EXPENSES,
             id,
-            {
-                ...expense,
-                date: expense.date ? new Date(expense.date).toISOString() : undefined,
-            }
+            updateData
         );
 
         return {
@@ -99,8 +115,7 @@ export async function updateExpense(id: string, expense: Partial<Expense>): Prom
             category: response.category,
             description: response.description,
             date: response.date,
-            attachments: response.attachments || [],
-            tags: response.tags || [],
+            createdAt: response.createdAt,
         };
     } catch (error) {
         console.error('Update expense error:', error);
@@ -160,4 +175,4 @@ export async function getExpenseStats(userId: string, startDate: Date, endDate: 
         console.error('Get expense stats error:', error);
         throw error;
     }
-} 
+}

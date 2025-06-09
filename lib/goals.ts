@@ -9,15 +9,35 @@ export async function createGoal(goal: Omit<FinancialGoal, 'id'>): Promise<Finan
             COLLECTIONS.GOALS,
             ID.unique(),
             {
-                ...goal,
-                targetDate: new Date(goal.targetDate).toISOString(),
+                userId: goal.userId || '',
+                title: goal.title,
+                description: goal.description || '',
+                targetAmount: goal.targetAmount,
+                currentAmount: goal.currentAmount,
+                category: goal.category || '',
+                type: goal.type,
+                period: goal.period,
+                startDate: new Date(goal.startDate).toISOString(),
+                endDate: new Date(goal.endDate).toISOString(),
+                isActive: goal.isActive,
                 createdAt: new Date().toISOString(),
             }
         );
 
         return {
             id: response.$id,
-            ...goal,
+            userId: response.userId,
+            title: response.title,
+            description: response.description,
+            targetAmount: response.targetAmount,
+            currentAmount: response.currentAmount,
+            category: response.category,
+            type: response.type,
+            period: response.period,
+            startDate: response.startDate,
+            endDate: response.endDate,
+            isActive: response.isActive,
+            createdAt: response.createdAt,
         };
     } catch (error) {
         console.error('Create goal error:', error);
@@ -32,7 +52,7 @@ export async function getGoals(userId: string): Promise<FinancialGoal[]> {
             COLLECTIONS.GOALS,
             [
                 Query.equal('userId', userId),
-                Query.orderAsc('targetDate'),
+                Query.orderDesc('createdAt'),
             ]
         );
 
@@ -43,9 +63,12 @@ export async function getGoals(userId: string): Promise<FinancialGoal[]> {
             description: doc.description,
             targetAmount: doc.targetAmount,
             currentAmount: doc.currentAmount,
-            targetDate: doc.targetDate,
             category: doc.category,
-            status: doc.status,
+            type: doc.type,
+            period: doc.period,
+            startDate: doc.startDate,
+            endDate: doc.endDate,
+            isActive: doc.isActive,
             createdAt: doc.createdAt,
         }));
     } catch (error) {
@@ -56,14 +79,24 @@ export async function getGoals(userId: string): Promise<FinancialGoal[]> {
 
 export async function updateGoal(id: string, goal: Partial<FinancialGoal>): Promise<FinancialGoal> {
     try {
+        const updateData: any = {};
+        
+        if (goal.title !== undefined) updateData.title = goal.title;
+        if (goal.description !== undefined) updateData.description = goal.description;
+        if (goal.targetAmount !== undefined) updateData.targetAmount = goal.targetAmount;
+        if (goal.currentAmount !== undefined) updateData.currentAmount = goal.currentAmount;
+        if (goal.category !== undefined) updateData.category = goal.category;
+        if (goal.type !== undefined) updateData.type = goal.type;
+        if (goal.period !== undefined) updateData.period = goal.period;
+        if (goal.isActive !== undefined) updateData.isActive = goal.isActive;
+        if (goal.startDate !== undefined) updateData.startDate = new Date(goal.startDate).toISOString();
+        if (goal.endDate !== undefined) updateData.endDate = new Date(goal.endDate).toISOString();
+
         const response = await databases.updateDocument(
             DATABASE_ID,
             COLLECTIONS.GOALS,
             id,
-            {
-                ...goal,
-                targetDate: goal.targetDate ? new Date(goal.targetDate).toISOString() : undefined,
-            }
+            updateData
         );
 
         return {
@@ -73,9 +106,12 @@ export async function updateGoal(id: string, goal: Partial<FinancialGoal>): Prom
             description: response.description,
             targetAmount: response.targetAmount,
             currentAmount: response.currentAmount,
-            targetDate: response.targetDate,
             category: response.category,
-            status: response.status,
+            type: response.type,
+            period: response.period,
+            startDate: response.startDate,
+            endDate: response.endDate,
+            isActive: response.isActive,
             createdAt: response.createdAt,
         };
     } catch (error) {
@@ -106,14 +142,14 @@ export async function updateGoalProgress(id: string, amount: number): Promise<Fi
         );
 
         const newAmount = goal.currentAmount + amount;
-        const status = newAmount >= goal.targetAmount ? 'completed' : 'in-progress';
+        const isActive = newAmount < goal.targetAmount;
 
         return await updateGoal(id, {
             currentAmount: newAmount,
-            status,
+            isActive,
         });
     } catch (error) {
         console.error('Update goal progress error:', error);
         throw error;
     }
-} 
+}
