@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { UserData, getCurrentUser, login, logout, createAccount, updateUserPreferences } from '@/lib/auth';
+import { isAppwriteConfigured } from '@/lib/appwrite';
 
 interface AuthContextType {
     user: UserData | null;
@@ -10,6 +11,7 @@ interface AuthContextType {
     logout: () => Promise<void>;
     register: (email: string, password: string, name: string) => Promise<void>;
     updatePreferences: (preferences: NonNullable<UserData['preferences']>) => Promise<void>;
+    isConfigured: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,10 +19,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<UserData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isConfigured] = useState(isAppwriteConfigured());
 
     useEffect(() => {
-        checkUser();
-    }, []);
+        if (isConfigured) {
+            checkUser();
+        } else {
+            console.error('Appwrite is not configured. Please check your environment variables.');
+            setIsLoading(false);
+        }
+    }, [isConfigured]);
 
     async function checkUser() {
         try {
@@ -28,18 +36,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(user);
         } catch (error) {
             console.error('Check user error:', error);
+            setUser(null);
         } finally {
             setIsLoading(false);
         }
     }
 
     async function handleLogin(email: string, password: string) {
+        if (!isConfigured) {
+            throw new Error('Appwrite is not configured properly');
+        }
+
         try {
+            setIsLoading(true);
             const userData = await login(email, password);
             setUser(userData);
         } catch (error) {
             console.error('Login error:', error);
             throw error;
+        } finally {
+            setIsLoading(false);
         }
     }
 
@@ -49,17 +65,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(null);
         } catch (error) {
             console.error('Logout error:', error);
-            throw error;
+            // Still clear user state even if logout fails
+            setUser(null);
         }
     }
 
     async function handleRegister(email: string, password: string, name: string) {
+        if (!isConfigured) {
+            throw new Error('Appwrite is not configured properly');
+        }
+
         try {
+            setIsLoading(true);
             const userData = await createAccount(email, password, name);
             setUser(userData);
         } catch (error) {
             console.error('Register error:', error);
             throw error;
+        } finally {
+            setIsLoading(false);
         }
     }
 
@@ -91,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout: handleLogout,
         register: handleRegister,
         updatePreferences: handleUpdatePreferences,
+        isConfigured,
     };
 
     return (

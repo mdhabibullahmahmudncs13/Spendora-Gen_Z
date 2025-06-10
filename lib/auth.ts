@@ -17,7 +17,7 @@ export async function createAccount(email: string, password: string, name: strin
         // Create account
         const user = await account.create(ID.unique(), email, password, name);
         
-        // Create user preferences document with individual fields instead of nested object
+        // Create user preferences document
         await databases.createDocument(
             DATABASE_ID,
             COLLECTIONS.USERS,
@@ -32,7 +32,7 @@ export async function createAccount(email: string, password: string, name: strin
             }
         );
 
-        // Log in the user
+        // Log in the user automatically after account creation
         await account.createEmailSession(email, password);
 
         return {
@@ -47,17 +47,27 @@ export async function createAccount(email: string, password: string, name: strin
         };
     } catch (error) {
         console.error('Account creation error:', error);
-        throw error;
+        throw new Error(error instanceof Error ? error.message : 'Failed to create account');
     }
 }
 
 export async function login(email: string, password: string): Promise<UserData> {
     try {
-        // Create session
-        await account.createEmailSession(email, password);
+        // First, check if there's already an active session and delete it
+        try {
+            await account.deleteSession('current');
+        } catch (sessionError) {
+            // Ignore error if no session exists
+            console.log('No existing session to delete');
+        }
+
+        // Create new session
+        const session = await account.createEmailSession(email, password);
+        console.log('Session created successfully:', session);
         
         // Get account info
         const user = await account.get();
+        console.log('User account retrieved:', user);
         
         // Get user preferences
         const preferences = await databases.listDocuments(
@@ -83,8 +93,22 @@ export async function login(email: string, password: string): Promise<UserData> 
             }
         };
     } catch (error) {
-        console.error('Login error:', error);
-        throw error;
+        console.error('Login error details:', error);
+        
+        // Provide more specific error messages
+        if (error instanceof Error) {
+            if (error.message.includes('Invalid credentials')) {
+                throw new Error('Invalid email or password. Please check your credentials and try again.');
+            } else if (error.message.includes('user_not_found')) {
+                throw new Error('No account found with this email address. Please sign up first.');
+            } else if (error.message.includes('user_blocked')) {
+                throw new Error('Your account has been temporarily blocked. Please contact support.');
+            } else if (error.message.includes('rate_limit')) {
+                throw new Error('Too many login attempts. Please wait a few minutes and try again.');
+            }
+        }
+        
+        throw new Error('Login failed. Please check your email and password.');
     }
 }
 
@@ -93,7 +117,7 @@ export async function logout(): Promise<void> {
         await account.deleteSession('current');
     } catch (error) {
         console.error('Logout error:', error);
-        throw error;
+        // Don't throw error for logout - just log it
     }
 }
 
@@ -123,6 +147,7 @@ export async function getCurrentUser(): Promise<UserData | null> {
             }
         };
     } catch (error) {
+        console.log('No current user session');
         return null;
     }
 }

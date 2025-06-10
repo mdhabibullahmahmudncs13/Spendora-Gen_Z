@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wallet, Shield, BarChart3, Bot, Sparkles, Zap } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Wallet, Shield, BarChart3, Bot, Sparkles, Zap, AlertCircle, Loader2 } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -22,20 +23,53 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupName, setSignupName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loginEmail && loginPassword) {
-      onLogin(loginEmail, loginPassword);
+    if (!loginEmail || !loginPassword) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      await onLogin(loginEmail, loginPassword);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (signupEmail && signupPassword && signupName) {
-      onSignup(signupEmail, signupPassword, signupName);
+    if (!signupEmail || !signupPassword || !signupName) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    if (signupPassword.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      await onSignup(signupEmail, signupPassword, signupName);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Signup failed');
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  const clearError = () => setError(null);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -56,6 +90,13 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
           </DialogTitle>
         </DialogHeader>
         
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
         <div className="grid grid-cols-2 gap-4 py-6">
           <div className="flex flex-col items-center p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-700">
             <div className="p-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 mb-3">
@@ -73,10 +114,18 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
 
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-slate-100 dark:bg-slate-800 rounded-xl">
-            <TabsTrigger value="login" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">
+            <TabsTrigger 
+              value="login" 
+              className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-600 data-[state=active]:text-white"
+              onClick={clearError}
+            >
               Login
             </TabsTrigger>
-            <TabsTrigger value="signup" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-600 data-[state=active]:text-white">
+            <TabsTrigger 
+              value="signup" 
+              className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-600 data-[state=active]:text-white"
+              onClick={clearError}
+            >
               Sign Up
             </TabsTrigger>
           </TabsList>
@@ -103,6 +152,7 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
                       placeholder="Enter your email"
                       className="mt-1 h-11 border-2 border-slate-200 dark:border-slate-700 focus:border-purple-500 transition-colors duration-300"
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <div>
@@ -115,11 +165,25 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
                       placeholder="Enter your password"
                       className="mt-1 h-11 border-2 border-slate-200 dark:border-slate-700 focus:border-purple-500 transition-colors duration-300"
                       required
+                      disabled={isLoading}
                     />
                   </div>
-                  <Button type="submit" className="w-full h-11 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold transition-all duration-300 transform hover:scale-105">
-                    <Zap className="h-4 w-4 mr-2" />
-                    Login
+                  <Button 
+                    type="submit" 
+                    className="w-full h-11 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:transform-none"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Logging in...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="h-4 w-4 mr-2" />
+                        Login
+                      </>
+                    )}
                   </Button>
                 </form>
               </CardContent>
@@ -148,6 +212,7 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
                       placeholder="Enter your full name"
                       className="mt-1 h-11 border-2 border-slate-200 dark:border-slate-700 focus:border-emerald-500 transition-colors duration-300"
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <div>
@@ -160,6 +225,7 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
                       placeholder="Enter your email"
                       className="mt-1 h-11 border-2 border-slate-200 dark:border-slate-700 focus:border-emerald-500 transition-colors duration-300"
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <div>
@@ -169,14 +235,29 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
                       type="password"
                       value={signupPassword}
                       onChange={(e) => setSignupPassword(e.target.value)}
-                      placeholder="Create a password"
+                      placeholder="Create a password (min 8 characters)"
                       className="mt-1 h-11 border-2 border-slate-200 dark:border-slate-700 focus:border-emerald-500 transition-colors duration-300"
                       required
+                      disabled={isLoading}
+                      minLength={8}
                     />
                   </div>
-                  <Button type="submit" className="w-full h-11 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold transition-all duration-300 transform hover:scale-105">
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Create Account
+                  <Button 
+                    type="submit" 
+                    className="w-full h-11 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:transform-none"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Creating account...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Create Account
+                      </>
+                    )}
                   </Button>
                 </form>
               </CardContent>
@@ -188,7 +269,7 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
           <div className="p-1 rounded-full bg-gradient-to-r from-purple-500 to-blue-600">
             <Bot className="h-3 w-3 text-white" />
           </div>
-          <span>AI-powered financial insights coming soon</span>
+          <span>AI-powered financial insights</span>
         </div>
       </DialogContent>
     </Dialog>
