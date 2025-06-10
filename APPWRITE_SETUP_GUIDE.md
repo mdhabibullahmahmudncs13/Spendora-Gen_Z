@@ -1,169 +1,131 @@
-# Complete Appwrite Setup Guide for FinanceAI
+# Appwrite Backend Setup for Spendora
 
-## Step 1: Create Appwrite Account and Project
+This guide will walk you through setting up Appwrite as the backend for the Spendora financial application.
 
-1. **Sign up for Appwrite Cloud**
-   - Go to [https://cloud.appwrite.io](https://cloud.appwrite.io)
-   - Create a free account
-   - Create a new project called "FinanceAI"
+## Prerequisites
 
-2. **Get Your Project Credentials**
-   - Project ID: Found in your project settings
-   - Endpoint: `https://cloud.appwrite.io/v1`
+- Node.js and npm installed
+- Appwrite account (sign up at [https://appwrite.io](https://appwrite.io) if you don't have one)
+
+## Step 1: Create an Appwrite Project
+
+1. Log in to your Appwrite Console
+2. Create a new project named "Spendora"
+3. Note your Project ID (you'll need this later)
 
 ## Step 2: Set Up Database
 
-1. **Create Database**
-   - Go to "Databases" in your Appwrite console
-   - Click "Create Database"
-   - Name: `financeai-db`
-   - Copy the Database ID
-
-2. **Create Collections**
+1. In your Appwrite project, go to Databases and create a new database named "spendora-db"
+2. Note your Database ID
+3. Create the following collections in your database:
 
 ### Users Collection
+
 - Collection ID: `users`
-- Name: `Users`
-- Permissions: Document Security enabled
+- Document Security: Enable "Document Security"
 
-**Attributes:**
-- `userId` (String, 255 chars, required) - Links to Appwrite Auth user
-- `email` (Email, required)
-- `name` (String, 255 chars, required)
-- `preferences` (JSON, optional)
+Attributes:
+- `userId` (string, required) - Relationship with Appwrite Auth
+- `email` (email, required)
+- `name` (string, required)
+- `preferences` (object):
+  - `currency` (string, default: "USD")
+  - `theme` (string, enum: ["light", "dark"], default: "light")
+  - `notifications` (boolean, default: true)
 
-**Indexes:**
-- `userId_index` on `userId` (Key index)
+Indexes:
+- Create an index on `userId` (attribute: userId, type: key)
 
 ### Expenses Collection
+
 - Collection ID: `expenses`
-- Name: `Expenses`
-- Permissions: Document Security enabled
+- Document Security: Enable "Document Security"
 
-**Attributes:**
-- `userId` (String, 255 chars, required)
-- `amount` (Double, required)
-- `category` (String, 255 chars, required)
-- `description` (String, 1000 chars, required)
-- `date` (DateTime, required)
-- `type` (String, 50 chars, required) - "income" or "expense"
-- `createdAt` (DateTime, required)
+Attributes:
+- `userId` (string, required)
+- `amount` (number, required)
+- `category` (string, required)
+- `description` (string, required)
+- `date` (datetime, required)
+- `type` (string, enum: ["income", "expense"], required)
+- `createdAt` (datetime, required)
 
-**Indexes:**
-- `userId_index` on `userId` (Key index)
-- `date_index` on `date` (Key index)
-- `type_index` on `type` (Key index)
+Indexes:
+- Create an index on `userId` (attribute: userId, type: key)
+- Create an index on `date` (attribute: date, type: key)
+- Create an index on `category` (attribute: category, type: key)
+- Create an index on `type` (attribute: type, type: key)
 
 ### Goals Collection
+
 - Collection ID: `goals`
-- Name: `Goals`
-- Permissions: Document Security enabled
+- Document Security: Enable "Document Security"
 
-**Attributes:**
-- `userId` (String, 255 chars, required)
-- `title` (String, 255 chars, required)
-- `description` (String, 1000 chars, optional)
-- `targetAmount` (Double, required)
-- `currentAmount` (Double, required, default: 0)
-- `category` (String, 255 chars, optional)
-- `type` (String, 50 chars, required)
-- `period` (String, 50 chars, required)
-- `startDate` (DateTime, required)
-- `endDate` (DateTime, required)
-- `isActive` (Boolean, required, default: true)
-- `createdAt` (DateTime, required)
+Attributes:
+- `userId` (string, required)
+- `title` (string, required)
+- `description` (string)
+- `targetAmount` (number, required)
+- `currentAmount` (number, required)
+- `category` (string)
+- `type` (string, enum: ["spending", "saving", "income"], required)
+- `period` (string, enum: ["weekly", "monthly", "yearly", "custom"], required)
+- `startDate` (datetime, required)
+- `endDate` (datetime, required)
+- `isActive` (boolean, required)
+- `createdAt` (datetime, required)
 
-**Indexes:**
-- `userId_index` on `userId` (Key index)
-- `isActive_index` on `isActive` (Key index)
+Indexes:
+- Create an index on `userId` (attribute: userId, type: key)
+- Create an index on `type` (attribute: type, type: key)
+- Create an index on `isActive` (attribute: isActive, type: key)
 
-## Step 3: Set Up Authentication
+### Categories Collection (Optional)
 
-1. **Enable Email/Password Auth**
-   - Go to "Auth" in your Appwrite console
-   - Enable "Email/Password" provider
-   - Disable email verification for now (can enable later)
+- Collection ID: `categories`
+- Document Security: Enable "Document Security"
 
-2. **Set Up Permissions**
-   For each collection, set these permissions:
+Attributes:
+- `name` (string, required)
+- `icon` (string)
+- `color` (string)
+- `type` (string, enum: ["income", "expense"], required)
 
-   **Create permissions:**
-   - `users` (authenticated users can create)
+Indexes:
+- Create an index on `type` (attribute: type, type: key)
 
-   **Read permissions:**
-   - `users` (authenticated users can read their own documents)
+## Step 3: Set Up Storage
 
-   **Update permissions:**
-   - `users` (authenticated users can update their own documents)
-
-   **Delete permissions:**
-   - `users` (authenticated users can delete their own documents)
+1. Go to Storage in your Appwrite console
+2. Create a new bucket named "attachments"
+3. Set permissions as needed (typically allow read for authenticated users, write for authenticated users)
+4. Note your Bucket ID
 
 ## Step 4: Configure Environment Variables
 
-Create a `.env.local` file in your project root:
+1. Copy the `.env.example` file to `.env.local`
+2. Fill in your Appwrite details:
 
-```env
+```
 NEXT_PUBLIC_APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
-NEXT_PUBLIC_APPWRITE_PROJECT_ID=your_project_id_here
-NEXT_PUBLIC_APPWRITE_DATABASE_ID=your_database_id_here
-NEXT_PUBLIC_APPWRITE_BUCKET_ID=your_bucket_id_here
-
-# Optional: API Keys for AI features
-OPENAI_API_KEY=your_openai_api_key
-TAVUS_API_KEY=your_tavus_api_key
-TAVUS_REPLICA_ID=your_tavus_replica_id
-TAVUS_PERSONA_ID=your_tavus_persona_id
-ELEVENLABS_API_KEY=your_elevenlabs_api_key
+NEXT_PUBLIC_APPWRITE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_APPWRITE_DATABASE_ID=your_database_id
+NEXT_PUBLIC_APPWRITE_BUCKET_ID=your_bucket_id
 ```
 
 ## Step 5: Test Your Setup
 
-1. Start your development server: `npm run dev`
+1. Run the application with `npm run dev`
 2. Try to register a new user
-3. Add some expenses and goals
-4. Check your Appwrite console to see the data
+3. Test creating expenses and goals
 
 ## Troubleshooting
 
-### Common Issues:
+- If you encounter CORS issues, make sure to add your application's URL to the allowed platforms in your Appwrite project settings
+- Check that all collection attributes and indexes are set up correctly
+- Verify that your environment variables are correctly set
 
-1. **CORS Errors**
-   - Add your domain to "Platforms" in Appwrite console
-   - For development: `http://localhost:3000`
+## Additional Resources
 
-2. **Permission Errors**
-   - Ensure document security is enabled
-   - Check that permissions are set correctly for each collection
-
-3. **Authentication Issues**
-   - Verify email/password provider is enabled
-   - Check that your project ID is correct
-
-### Security Rules
-
-For production, you'll want to add these security rules to each collection:
-
-```javascript
-// Users collection
-and([
-  equal($userId, attribute("userId"))
-])
-
-// Expenses collection  
-and([
-  equal($userId, attribute("userId"))
-])
-
-// Goals collection
-and([
-  equal($userId, attribute("userId"))
-])
-```
-
-## Next Steps
-
-1. Set up file storage (optional)
-2. Configure webhooks for real-time updates
-3. Add more advanced security rules
-4. Set up backup strategies
+- [Appwrite Documentation](https://appwrite.io/docs)
+- [Next.js Documentation](https://nextjs.org/docs)
