@@ -17,7 +17,7 @@ export async function createAccount(email: string, password: string, name: strin
         // Create account
         const user = await account.create(ID.unique(), email, password, name);
         
-        // Create user preferences document
+        // Create user preferences document with individual fields instead of nested object
         await databases.createDocument(
             DATABASE_ID,
             COLLECTIONS.USERS,
@@ -26,11 +26,9 @@ export async function createAccount(email: string, password: string, name: strin
                 userId: user.$id,
                 email: user.email,
                 name: user.name,
-                preferences: {
-                    currency: 'USD',
-                    theme: 'light',
-                    notifications: true,
-                }
+                currency: 'USD',
+                theme: 'light',
+                notifications: true,
             }
         );
 
@@ -74,7 +72,11 @@ export async function login(email: string, password: string): Promise<UserData> 
             id: user.$id,
             email: user.email,
             name: user.name,
-            preferences: userPrefs?.preferences || {
+            preferences: userPrefs ? {
+                currency: userPrefs.currency || 'USD',
+                theme: userPrefs.theme || 'light',
+                notifications: userPrefs.notifications !== undefined ? userPrefs.notifications : true,
+            } : {
                 currency: 'USD',
                 theme: 'light',
                 notifications: true,
@@ -110,7 +112,11 @@ export async function getCurrentUser(): Promise<UserData | null> {
             id: user.$id,
             email: user.email,
             name: user.name,
-            preferences: userPrefs?.preferences || {
+            preferences: userPrefs ? {
+                currency: userPrefs.currency || 'USD',
+                theme: userPrefs.theme || 'light',
+                notifications: userPrefs.notifications !== undefined ? userPrefs.notifications : true,
+            } : {
                 currency: 'USD',
                 theme: 'light',
                 notifications: true,
@@ -138,16 +144,17 @@ export async function updateUserPreferences(
 
         if (userDocs.documents.length > 0) {
             const userDoc = userDocs.documents[0];
+            const updateData: any = {};
+            
+            if (preferences.currency !== undefined) updateData.currency = preferences.currency;
+            if (preferences.theme !== undefined) updateData.theme = preferences.theme;
+            if (preferences.notifications !== undefined) updateData.notifications = preferences.notifications;
+            
             await databases.updateDocument(
                 DATABASE_ID,
                 COLLECTIONS.USERS,
                 userDoc.$id,
-                {
-                    preferences: {
-                        ...userDoc.preferences,
-                        ...preferences
-                    }
-                }
+                updateData
             );
         }
     } catch (error) {

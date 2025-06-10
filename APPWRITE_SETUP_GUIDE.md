@@ -27,13 +27,15 @@
 - Permissions: Document Security enabled
 
 **Attributes:**
-- `userId` (String, 255 chars, required) - Links to Appwrite Auth user
-- `email` (Email, required)
-- `name` (String, 255 chars, required)
-- `preferences` (JSON, optional)
+- `userId` (String, Size: 255, Required: Yes) - Links to Appwrite Auth user
+- `email` (Email, Required: Yes)
+- `name` (String, Size: 255, Required: Yes)
+- `currency` (String, Size: 10, Required: No, Default: "USD")
+- `theme` (String, Size: 20, Required: No, Default: "light")
+- `notifications` (Boolean, Required: No, Default: true)
 
 **Indexes:**
-- `userId_index` on `userId` (Key index)
+- Key: `userId_index`, Type: Key, Attributes: [`userId`]
 
 ### Expenses Collection
 - Collection ID: `expenses`
@@ -41,18 +43,18 @@
 - Permissions: Document Security enabled
 
 **Attributes:**
-- `userId` (String, 255 chars, required)
-- `amount` (Double, required)
-- `category` (String, 255 chars, required)
-- `description` (String, 1000 chars, required)
-- `date` (DateTime, required)
-- `type` (String, 50 chars, required) - "income" or "expense"
-- `createdAt` (DateTime, required)
+- `userId` (String, Size: 255, Required: Yes)
+- `amount` (Float, Required: Yes)
+- `category` (String, Size: 255, Required: Yes)
+- `description` (String, Size: 1000, Required: Yes)
+- `date` (DateTime, Required: Yes)
+- `type` (String, Size: 50, Required: Yes) - "income" or "expense"
+- `createdAt` (DateTime, Required: Yes)
 
 **Indexes:**
-- `userId_index` on `userId` (Key index)
-- `date_index` on `date` (Key index)
-- `type_index` on `type` (Key index)
+- Key: `userId_index`, Type: Key, Attributes: [`userId`]
+- Key: `date_index`, Type: Key, Attributes: [`date`]
+- Key: `type_index`, Type: Key, Attributes: [`type`]
 
 ### Goals Collection
 - Collection ID: `goals`
@@ -60,22 +62,22 @@
 - Permissions: Document Security enabled
 
 **Attributes:**
-- `userId` (String, 255 chars, required)
-- `title` (String, 255 chars, required)
-- `description` (String, 1000 chars, optional)
-- `targetAmount` (Double, required)
-- `currentAmount` (Double, required, default: 0)
-- `category` (String, 255 chars, optional)
-- `type` (String, 50 chars, required)
-- `period` (String, 50 chars, required)
-- `startDate` (DateTime, required)
-- `endDate` (DateTime, required)
-- `isActive` (Boolean, required, default: true)
-- `createdAt` (DateTime, required)
+- `userId` (String, Size: 255, Required: Yes)
+- `title` (String, Size: 255, Required: Yes)
+- `description` (String, Size: 1000, Required: No)
+- `targetAmount` (Float, Required: Yes)
+- `currentAmount` (Float, Required: Yes, Default: 0)
+- `category` (String, Size: 255, Required: No)
+- `type` (String, Size: 50, Required: Yes)
+- `period` (String, Size: 50, Required: Yes)
+- `startDate` (DateTime, Required: Yes)
+- `endDate` (DateTime, Required: Yes)
+- `isActive` (Boolean, Required: Yes, Default: true)
+- `createdAt` (DateTime, Required: Yes)
 
 **Indexes:**
-- `userId_index` on `userId` (Key index)
-- `isActive_index` on `isActive` (Key index)
+- Key: `userId_index`, Type: Key, Attributes: [`userId`]
+- Key: `isActive_index`, Type: Key, Attributes: [`isActive`]
 
 ## Step 3: Set Up Authentication
 
@@ -85,29 +87,35 @@
    - Disable email verification for now (can enable later)
 
 2. **Set Up Permissions**
-   For each collection, set these permissions:
+   For each collection, go to Settings > Permissions:
 
-   **Create permissions:**
-   - `users` (authenticated users can create)
+   **Users Collection:**
+   - Create: `users` (any authenticated user)
+   - Read: `users` (any authenticated user) 
+   - Update: `users` (any authenticated user)
+   - Delete: `users` (any authenticated user)
 
-   **Read permissions:**
-   - `users` (authenticated users can read their own documents)
+   **Expenses Collection:**
+   - Create: `users` (any authenticated user)
+   - Read: `users` (any authenticated user)
+   - Update: `users` (any authenticated user) 
+   - Delete: `users` (any authenticated user)
 
-   **Update permissions:**
-   - `users` (authenticated users can update their own documents)
-
-   **Delete permissions:**
-   - `users` (authenticated users can delete their own documents)
+   **Goals Collection:**
+   - Create: `users` (any authenticated user)
+   - Read: `users` (any authenticated user)
+   - Update: `users` (any authenticated user)
+   - Delete: `users` (any authenticated user)
 
 ## Step 4: Configure Environment Variables
 
-Create a `.env.local` file in your project root:
+Update your `.env.local` file with your actual Appwrite credentials:
 
 ```env
 NEXT_PUBLIC_APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
-NEXT_PUBLIC_APPWRITE_PROJECT_ID=your_project_id_here
-NEXT_PUBLIC_APPWRITE_DATABASE_ID=your_database_id_here
-NEXT_PUBLIC_APPWRITE_BUCKET_ID=your_bucket_id_here
+NEXT_PUBLIC_APPWRITE_PROJECT_ID=your_actual_project_id
+NEXT_PUBLIC_APPWRITE_DATABASE_ID=your_actual_database_id
+NEXT_PUBLIC_APPWRITE_BUCKET_ID=your_actual_bucket_id
 
 # Optional: API Keys for AI features
 OPENAI_API_KEY=your_openai_api_key
@@ -119,51 +127,66 @@ ELEVENLABS_API_KEY=your_elevenlabs_api_key
 
 ## Step 5: Test Your Setup
 
-1. Start your development server: `npm run dev`
-2. Try to register a new user
-3. Add some expenses and goals
-4. Check your Appwrite console to see the data
+1. Make sure your development server is running: `npm run dev`
+2. Go to `http://localhost:3000/dashboard`
+3. Try to register a new user
+4. Add some expenses and goals
+5. Check your Appwrite console to see the data appearing
 
 ## Troubleshooting
 
 ### Common Issues:
 
 1. **CORS Errors**
-   - Add your domain to "Platforms" in Appwrite console
-   - For development: `http://localhost:3000`
+   - Go to "Settings" > "Platforms" in your Appwrite project
+   - Add a new Web platform with URL: `http://localhost:3000`
+   - For production, add your actual domain
 
 2. **Permission Errors**
-   - Ensure document security is enabled
-   - Check that permissions are set correctly for each collection
+   - Ensure "Document Security" is enabled for all collections
+   - Check that permissions are set to `users` for all operations
 
 3. **Authentication Issues**
-   - Verify email/password provider is enabled
-   - Check that your project ID is correct
+   - Verify Email/Password provider is enabled in Auth settings
+   - Check that your project ID in `.env.local` matches exactly
 
-### Security Rules
+4. **Attribute Type Errors**
+   - Use `Float` instead of `Double` for decimal numbers
+   - Use `String` with appropriate size limits
+   - Use `Boolean` for true/false values
+   - Use `DateTime` for dates
 
-For production, you'll want to add these security rules to each collection:
+### Important Notes:
 
-```javascript
-// Users collection
-and([
-  equal($userId, attribute("userId"))
-])
+- **Float vs Integer**: Use `Float` for amounts (allows decimals)
+- **String Sizes**: Set appropriate sizes (255 for most fields, 1000 for descriptions)
+- **Required Fields**: Mark essential fields as required
+- **Default Values**: Set defaults where appropriate (like currency: "USD")
 
-// Expenses collection  
-and([
-  equal($userId, attribute("userId"))
-])
+## Step-by-Step Collection Creation:
 
-// Goals collection
-and([
-  equal($userId, attribute("userId"))
-])
-```
+### Creating the Users Collection:
+1. Click "Create Collection"
+2. Collection ID: `users`
+3. Name: `Users`
+4. Enable "Document Security"
+5. Add each attribute one by one using the "+ Create Attribute" button
+6. Create the index after all attributes are added
 
-## Next Steps
+### Creating Attributes Example (Users Collection):
+1. Click "+ Create Attribute"
+2. Select "String"
+3. Key: `userId`
+4. Size: `255`
+5. Required: `Yes`
+6. Click "Create"
 
-1. Set up file storage (optional)
-2. Configure webhooks for real-time updates
-3. Add more advanced security rules
-4. Set up backup strategies
+Repeat for all attributes in each collection.
+
+## Next Steps After Setup:
+
+1. Test user registration and login
+2. Verify data is being saved to Appwrite
+3. Check the Appwrite console for your data
+4. Optionally set up file storage for attachments
+5. Configure webhooks for real-time updates (advanced)
