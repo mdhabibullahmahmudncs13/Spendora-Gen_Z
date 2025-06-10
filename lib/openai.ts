@@ -1,8 +1,14 @@
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
+// Check if OpenAI API key is properly configured
+const isOpenAIConfigured = () => {
+  const apiKey = process.env.OPENAI_API_KEY;
+  return apiKey && apiKey !== 'your_openai_api_key' && apiKey !== 'your_openai_api_key_here' && apiKey.startsWith('sk-');
+};
+
+const openai = isOpenAIConfigured() ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-});
+}) : null;
 
 export interface FinancialInsight {
   type: 'tip' | 'warning' | 'opportunity' | 'goal';
@@ -131,7 +137,7 @@ export async function analyzeSpendingPatterns(expenses: any[]): Promise<Spending
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5);
 
-  if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'your_openai_api_key_here') {
+  if (!isOpenAIConfigured()) {
     console.warn('OpenAI API key not configured, using enhanced fallback analysis');
     return createFallbackAnalysis(expenses, totalSpending, topCategories);
   }
@@ -149,7 +155,7 @@ Please analyze this spending pattern and provide actionable financial insights.
 `;
 
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await openai!.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
@@ -234,7 +240,7 @@ Focus on:
 }
 
 export async function generatePersonalizedTip(expenses: any[], userGoal?: string): Promise<string> {
-  if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'your_openai_api_key_here') {
+  if (!isOpenAIConfigured()) {
     return generateFallbackTip(expenses, userGoal);
   }
 
@@ -248,7 +254,7 @@ export async function generatePersonalizedTip(expenses: any[], userGoal?: string
   const context = `Recent transactions: ${recentExpenses.map(exp => `${exp.type === 'income' ? '+' : '-'}$${exp.amount} on ${exp.category} - ${exp.description}`).join(', ')}`;
   
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await openai!.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
