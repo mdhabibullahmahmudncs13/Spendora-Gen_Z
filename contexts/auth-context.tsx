@@ -37,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const connectionTest = await testAppwriteConnection();
             if (!connectionTest.success) {
                 setConnectionError(connectionTest.error);
+                // Don't try to check user if connection failed
             } else {
                 setConnectionError(null);
                 await checkUser();
@@ -56,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (error) {
             console.error('Check user error:', error);
             setUser(null);
+            // Don't set connection error here as this might just mean user is not logged in
         }
     }
 
