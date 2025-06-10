@@ -33,7 +33,7 @@ export async function createAccount(email: string, password: string, name: strin
         );
 
         // Log in the user automatically after account creation
-        await account.createEmailSession(email, password);
+        await account.createEmailPasswordSession(email, password);
 
         return {
             id: user.$id,
@@ -62,7 +62,7 @@ export async function login(email: string, password: string): Promise<UserData> 
         }
 
         // Create new session
-        const session = await account.createEmailSession(email, password);
+        const session = await account.createEmailPasswordSession(email, password);
         console.log('Session created successfully:', session);
         
         // Get account info
