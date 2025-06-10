@@ -201,23 +201,29 @@ export function VideoAdvisorModal({ isOpen, onClose, user, expenses }: VideoAdvi
     setChatMessages(prev => [...prev, userMessage]);
     setCurrentMessage('');
 
-    // Simulate AI response
+    // Simulate AI response based on financial context
     setTimeout(() => {
-      const aiResponses = [
-        "That's a great question! Based on your spending patterns, I'd recommend focusing on your largest expense categories first.",
-        "I can see you're doing well with tracking your expenses. Have you considered setting up an emergency fund?",
-        "Your savings rate looks good! Let's talk about optimizing your budget for better financial health.",
-        "I notice some interesting patterns in your spending. Would you like me to analyze your top categories?",
-        "That's a smart financial move! Here's what I'd suggest as your next step...",
-        "Based on your income and expenses, you're on a good track. Let's discuss some optimization strategies."
+      const context = getFinancialContext();
+      const responses = [
+        `Based on your monthly income of $${context.monthlyIncome} and expenses of $${context.monthlyExpenses}, you have a ${parseFloat(context.savingsRate) >= 10 ? 'healthy' : 'concerning'} savings rate of ${context.savingsRate}%. ${parseFloat(context.savingsRate) < 10 ? 'I recommend aiming for at least 10-20% savings rate.' : 'Great job on maintaining a good savings rate!'}`,
+        
+        `I notice your top spending category is ${context.topCategories[0]?.category || 'various expenses'}. ${context.topCategories[0] ? `You're spending $${context.topCategories[0].amount} monthly on this. ` : ''}Would you like some tips on optimizing this category?`,
+        
+        `Your net income of $${context.netIncome} ${parseFloat(context.netIncome) >= 0 ? 'shows you\'re living within your means - excellent!' : 'indicates you\'re spending more than you earn. Let\'s work on a budget plan.'}`,
+        
+        "Have you considered setting up an emergency fund? I recommend having 3-6 months of expenses saved for unexpected situations.",
+        
+        "That's a great question! Let me suggest some practical steps you can take immediately to improve your financial situation.",
+        
+        "I can see you're actively tracking your expenses, which is the first step to financial success. What specific financial goal would you like to work towards?"
       ];
 
-      const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)];
+      const contextualResponse = responses[Math.floor(Math.random() * responses.length)];
       
       const aiMessage = {
         id: (Date.now() + 1).toString(),
         sender: 'ai' as const,
-        message: randomResponse,
+        message: contextualResponse,
         timestamp: new Date()
       };
 
@@ -330,7 +336,7 @@ export function VideoAdvisorModal({ isOpen, onClose, user, expenses }: VideoAdvi
                       </div>
                       <p className="text-red-700 dark:text-red-300 font-medium mb-2">Connection Failed</p>
                       <p className="text-sm text-red-600 dark:text-red-400 mb-4">
-                        Tavus API is not configured. Try the demo mode to experience the AI advisor!
+                        {connectionError.includes('credentials') ? 'Tavus API credentials may need verification.' : 'Unable to connect to Tavus video service.'} Try the demo mode to experience the AI advisor!
                       </p>
                       
                       <Button
@@ -350,7 +356,7 @@ export function VideoAdvisorModal({ isOpen, onClose, user, expenses }: VideoAdvi
                       </div>
                       <p className="text-emerald-700 dark:text-emerald-300 font-medium mb-2">AI Financial Advisor Ready</p>
                       <p className="text-sm text-emerald-600 dark:text-emerald-400">
-                        Get personalized financial advice through video conversation
+                        Get personalized financial advice through video conversation or try our interactive demo
                       </p>
                     </>
                   )}
@@ -361,6 +367,7 @@ export function VideoAdvisorModal({ isOpen, onClose, user, expenses }: VideoAdvi
               <div className="flex justify-center gap-4">
                 <Button
                   onClick={startDemoSession}
+                  disabled={isConnecting}
                   className="h-14 px-8 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold transition-all duration-300 transform hover:scale-105"
                 >
                   <Play className="h-5 w-5 mr-2" />

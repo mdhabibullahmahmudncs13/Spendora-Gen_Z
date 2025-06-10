@@ -8,8 +8,8 @@ export async function POST(request: NextRequest) {
 
     // Use your specific Tavus credentials
     const apiKey = process.env.TAVUS_API_KEY?.trim();
-    const replicaId = 'r4317e64d25a'; // Your specific Replica ID
-    const personaId = 'p42a7aa830cc'; // Your specific Persona ID
+    const replicaId = process.env.TAVUS_REPLICA_ID?.trim() || 'r4317e64d25a';
+    const personaId = process.env.TAVUS_PERSONA_ID?.trim() || 'p42a7aa830cc';
 
     if (!apiKey || apiKey === 'your_actual_tavus_api_key_here' || apiKey.length < 10) {
       console.error('Tavus API Key validation failed:', { 
@@ -123,7 +123,7 @@ Your mission: Be their trusted financial guide, helping them make informed decis
 
     const requestBody = {
       replica_id: replicaId,
-      persona_id: personaId, // Using your specific Persona ID
+      persona_id: personaId,
       conversation_name: `Financial Advisory Session - ${userData.name}`,
       conversational_context: conversationContext,
       properties: {
@@ -144,7 +144,7 @@ Your mission: Be their trusted financial guide, helping them make informed decis
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'x-api-key': apiKey, // Some APIs prefer this header format
+        'x-api-key': apiKey,
       },
       body: JSON.stringify(requestBody),
     });
