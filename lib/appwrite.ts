@@ -70,27 +70,18 @@ export const testAppwriteConnection = async () => {
         }
         
         // Try to get account info to test connection
-        // Use a timeout to prevent hanging requests
-        const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Connection timeout')), 10000);
-        });
-        
-        await Promise.race([account.get(), timeoutPromise]);
+        await account.get();
         return { success: true, error: null };
     } catch (error: any) {
         console.error('Appwrite connection test failed:', error);
         
         // Provide more specific error messages
-        if (error.message === 'Connection timeout') {
-            return { success: false, error: 'Connection timeout - check your endpoint URL and network connection' };
-        } else if (error.code === 401) {
+        if (error.code === 401) {
             return { success: false, error: 'Authentication failed - user not logged in' };
         } else if (error.code === 404) {
             return { success: false, error: 'Appwrite project not found - check your project ID' };
-        } else if (error.message?.includes('fetch') || error.name === 'TypeError') {
-            return { success: false, error: 'Cannot connect to Appwrite - check your endpoint URL and CORS settings in Appwrite Console' };
-        } else if (error.message?.includes('CORS')) {
-            return { success: false, error: 'CORS error - add http://localhost:3000 as a web platform in your Appwrite Console' };
+        } else if (error.message?.includes('fetch')) {
+            return { success: false, error: 'Cannot connect to Appwrite - check your endpoint URL and CORS settings' };
         } else {
             return { success: false, error: error.message || 'Unknown connection error' };
         }
