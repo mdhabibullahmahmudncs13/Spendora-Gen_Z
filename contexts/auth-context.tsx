@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { UserData, getCurrentUser, login, logout, createAccount, updateUserPreferences } from '@/lib/auth';
-import { isAppwriteConfigured } from '@/lib/appwrite';
+import { isAppwriteConfigured, testAppwriteConnection } from '@/lib/appwrite';
 
 interface AuthContextType {
     user: UserData | null;
@@ -12,6 +12,7 @@ interface AuthContextType {
     register: (email: string, password: string, name: string) => Promise<void>;
     updatePreferences: (preferences: NonNullable<UserData['preferences']>) => Promise<void>;
     isConfigured: boolean;
+    connectionError: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,16 +20,34 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<UserData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [connectionError, setConnectionError] = useState<string | null>(null);
     const [isConfigured] = useState(isAppwriteConfigured());
 
     useEffect(() => {
         if (isConfigured) {
-            checkUser();
+            checkConnection();
         } else {
-            console.error('Appwrite is not configured. Please check your environment variables.');
+            setConnectionError('Appwrite is not configured. Please check your environment variables.');
             setIsLoading(false);
         }
     }, [isConfigured]);
+
+    async function checkConnection() {
+        try {
+            const connectionTest = await testAppwriteConnection();
+            if (!connectionTest.success) {
+                setConnectionError(connectionTest.error);
+            } else {
+                setConnectionError(null);
+                await checkUser();
+            }
+        } catch (error) {
+            console.error('Connection check failed:', error);
+            setConnectionError('Failed to connect to authentication service');
+        } finally {
+            setIsLoading(false);
+        }
+    }
 
     async function checkUser() {
         try {
@@ -37,20 +56,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (error) {
             console.error('Check user error:', error);
             setUser(null);
-        } finally {
-            setIsLoading(false);
         }
     }
 
     async function handleLogin(email: string, password: string) {
         if (!isConfigured) {
-            throw new Error('Appwrite is not configured properly');
+            throw new Error('Authentication service is not configured properly');
+        }
+
+        if (connectionError) {
+            throw new Error(connectionError);
         }
 
         try {
             setIsLoading(true);
             const userData = await login(email, password);
             setUser(userData);
+            setConnectionError(null);
         } catch (error) {
             console.error('Login error:', error);
             throw error;
@@ -72,13 +94,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function handleRegister(email: string, password: string, name: string) {
         if (!isConfigured) {
-            throw new Error('Appwrite is not configured properly');
+            throw new Error('Authentication service is not configured properly');
+        }
+
+        if (connectionError) {
+            throw new Error(connectionError);
         }
 
         try {
             setIsLoading(true);
             const userData = await createAccount(email, password, name);
             setUser(userData);
+            setConnectionError(null);
         } catch (error) {
             console.error('Register error:', error);
             throw error;
@@ -116,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register: handleRegister,
         updatePreferences: handleUpdatePreferences,
         isConfigured,
+        connectionError,
     };
 
     return (

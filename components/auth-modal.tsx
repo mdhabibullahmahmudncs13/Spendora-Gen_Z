@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Wallet, Shield, BarChart3, Bot, Sparkles, Zap, AlertCircle, Loader2 } from 'lucide-react';
+import { Wallet, Shield, BarChart3, Bot, Sparkles, Zap, AlertCircle, Loader2, Wifi, WifiOff } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -26,10 +27,17 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { connectionError, isConfigured } = useAuth();
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginEmail || !loginPassword) {
       setError('Please fill in all fields');
+      return;
+    }
+
+    if (connectionError) {
+      setError(connectionError);
       return;
     }
 
@@ -57,6 +65,11 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
       return;
     }
 
+    if (connectionError) {
+      setError(connectionError);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     
@@ -71,6 +84,43 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
 
   const clearError = () => setError(null);
 
+  // Show configuration error if Appwrite is not configured
+  if (!isConfigured) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-md gradient-card border-0">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-center space-x-3 text-center">
+              <div className="p-3 bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl shadow-lg">
+                <WifiOff className="h-8 w-8 text-white" />
+              </div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
+                Configuration Required
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              FinanceAI requires Appwrite configuration to function properly. Please check your environment variables and ensure Appwrite is set up correctly.
+            </AlertDescription>
+          </Alert>
+
+          <div className="space-y-4 text-sm text-slate-600 dark:text-slate-300">
+            <p>Required environment variables:</p>
+            <ul className="list-disc list-inside space-y-1 ml-4">
+              <li>NEXT_PUBLIC_APPWRITE_ENDPOINT</li>
+              <li>NEXT_PUBLIC_APPWRITE_PROJECT_ID</li>
+              <li>NEXT_PUBLIC_APPWRITE_DATABASE_ID</li>
+            </ul>
+            <p>Please refer to the APPWRITE_SETUP_GUIDE.md file for detailed setup instructions.</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md gradient-card border-0">
@@ -81,7 +131,11 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
                 <Wallet className="h-8 w-8 text-white" />
               </div>
               <div className="absolute -top-1 -right-1">
-                <Sparkles className="h-4 w-4 text-yellow-400 animate-pulse" />
+                {connectionError ? (
+                  <WifiOff className="h-4 w-4 text-red-400" />
+                ) : (
+                  <Sparkles className="h-4 w-4 text-yellow-400 animate-pulse" />
+                )}
               </div>
             </div>
             <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
@@ -90,10 +144,19 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
           </DialogTitle>
         </DialogHeader>
         
-        {error && (
+        {(error || connectionError) && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{error || connectionError}</AlertDescription>
+          </Alert>
+        )}
+        
+        {connectionError && (
+          <Alert className="mb-4 border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-900/20">
+            <WifiOff className="h-4 w-4 text-orange-600" />
+            <AlertDescription className="text-orange-800 dark:text-orange-200">
+              Connection issue detected. Please check your internet connection and try again.
+            </AlertDescription>
           </Alert>
         )}
         
@@ -152,7 +215,7 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
                       placeholder="Enter your email"
                       className="mt-1 h-11 border-2 border-slate-200 dark:border-slate-700 focus:border-purple-500 transition-colors duration-300"
                       required
-                      disabled={isLoading}
+                      disabled={isLoading || !!connectionError}
                     />
                   </div>
                   <div>
@@ -165,13 +228,13 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
                       placeholder="Enter your password"
                       className="mt-1 h-11 border-2 border-slate-200 dark:border-slate-700 focus:border-purple-500 transition-colors duration-300"
                       required
-                      disabled={isLoading}
+                      disabled={isLoading || !!connectionError}
                     />
                   </div>
                   <Button 
                     type="submit" 
                     className="w-full h-11 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:transform-none"
-                    disabled={isLoading}
+                    disabled={isLoading || !!connectionError}
                   >
                     {isLoading ? (
                       <>
@@ -212,7 +275,7 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
                       placeholder="Enter your full name"
                       className="mt-1 h-11 border-2 border-slate-200 dark:border-slate-700 focus:border-emerald-500 transition-colors duration-300"
                       required
-                      disabled={isLoading}
+                      disabled={isLoading || !!connectionError}
                     />
                   </div>
                   <div>
@@ -225,7 +288,7 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
                       placeholder="Enter your email"
                       className="mt-1 h-11 border-2 border-slate-200 dark:border-slate-700 focus:border-emerald-500 transition-colors duration-300"
                       required
-                      disabled={isLoading}
+                      disabled={isLoading || !!connectionError}
                     />
                   </div>
                   <div>
@@ -238,14 +301,14 @@ export function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthModalProps
                       placeholder="Create a password (min 8 characters)"
                       className="mt-1 h-11 border-2 border-slate-200 dark:border-slate-700 focus:border-emerald-500 transition-colors duration-300"
                       required
-                      disabled={isLoading}
+                      disabled={isLoading || !!connectionError}
                       minLength={8}
                     />
                   </div>
                   <Button 
                     type="submit" 
                     className="w-full h-11 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:transform-none"
-                    disabled={isLoading}
+                    disabled={isLoading || !!connectionError}
                   >
                     {isLoading ? (
                       <>
