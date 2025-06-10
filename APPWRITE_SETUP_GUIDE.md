@@ -86,28 +86,72 @@
    - Enable "Email/Password" provider
    - Disable email verification for now (can enable later)
 
-2. **Set Up Permissions**
-   For each collection, go to Settings > Permissions:
+## Step 4: CRITICAL - Set Up Collection Permissions
 
-   **Users Collection:**
-   - Create: `users` (any authenticated user)
-   - Read: `users` (any authenticated user) 
-   - Update: `users` (any authenticated user)
-   - Delete: `users` (any authenticated user)
+**This is the most important step to fix authorization errors!**
 
-   **Expenses Collection:**
-   - Create: `users` (any authenticated user)
-   - Read: `users` (any authenticated user)
-   - Update: `users` (any authenticated user) 
-   - Delete: `users` (any authenticated user)
+For each collection, you need to set up permissions correctly:
 
-   **Goals Collection:**
-   - Create: `users` (any authenticated user)
-   - Read: `users` (any authenticated user)
-   - Update: `users` (any authenticated user)
-   - Delete: `users` (any authenticated user)
+### Setting Permissions for Each Collection:
 
-## Step 4: Configure Environment Variables
+1. **Go to your collection** (Users, Expenses, or Goals)
+2. **Click on the "Settings" tab**
+3. **Click on "Permissions"**
+4. **You will see different permission types: Create, Read, Update, Delete**
+
+### For Users Collection:
+- **Create**: Click "Add a role" → Select "Any" → Click "Add"
+- **Read**: Click "Add a role" → Select "Users" → Click "Add" 
+- **Update**: Click "Add a role" → Select "Users" → Click "Add"
+- **Delete**: Click "Add a role" → Select "Users" → Click "Add"
+
+### For Expenses Collection:
+- **Create**: Click "Add a role" → Select "Users" → Click "Add"
+- **Read**: Click "Add a role" → Select "Users" → Click "Add"
+- **Update**: Click "Add a role" → Select "Users" → Click "Add"
+- **Delete**: Click "Add a role" → Select "Users" → Click "Add"
+
+### For Goals Collection:
+- **Create**: Click "Add a role" → Select "Users" → Click "Add"
+- **Read**: Click "Add a role" → Select "Users" → Click "Add"
+- **Update**: Click "Add a role" → Select "Users" → Click "Add"
+- **Delete**: Click "Add a role" → Select "Users" → Click "Add"
+
+### Alternative Method - Using Role Labels:
+If you see text fields instead of dropdowns, enter these exact values:
+
+**For Users Collection:**
+- Create: `any`
+- Read: `users`
+- Update: `users`
+- Delete: `users`
+
+**For Expenses Collection:**
+- Create: `users`
+- Read: `users`
+- Update: `users`
+- Delete: `users`
+
+**For Goals Collection:**
+- Create: `users`
+- Read: `users`
+- Update: `users`
+- Delete: `users`
+
+## Step 5: Configure Platform Settings
+
+1. **Add Platform for CORS**
+   - Go to "Settings" → "Platforms" in your Appwrite project
+   - Click "Add Platform"
+   - Select "Web App"
+   - Name: `FinanceAI Local`
+   - Hostname: `localhost:3000`
+   - Click "Next" and then "Create"
+
+2. **For Production** (when you deploy):
+   - Add another platform with your production domain
+
+## Step 6: Configure Environment Variables
 
 Update your `.env.local` file with your actual Appwrite credentials:
 
@@ -125,68 +169,71 @@ TAVUS_PERSONA_ID=your_tavus_persona_id
 ELEVENLABS_API_KEY=your_elevenlabs_api_key
 ```
 
-## Step 5: Test Your Setup
+## Step 7: Test Your Setup
 
 1. Make sure your development server is running: `npm run dev`
 2. Go to `http://localhost:3000/dashboard`
 3. Try to register a new user
-4. Add some expenses and goals
-5. Check your Appwrite console to see the data appearing
+4. **Test adding an expense** - this should now work without authorization errors
+5. Add some goals
+6. Check your Appwrite console to see the data appearing
 
-## Troubleshooting
+## Troubleshooting Authorization Errors
 
-### Common Issues:
+### If you still get "not authorized" errors:
 
-1. **CORS Errors**
-   - Go to "Settings" > "Platforms" in your Appwrite project
-   - Add a new Web platform with URL: `http://localhost:3000`
-   - For production, add your actual domain
+1. **Double-check permissions**:
+   - Go to each collection → Settings → Permissions
+   - Ensure "Users" role is added to Create, Read, Update, Delete
+   - Save changes and wait a few seconds
 
-2. **Permission Errors**
-   - Ensure "Document Security" is enabled for all collections
-   - Check that permissions are set to `users` for all operations
+2. **Verify user authentication**:
+   - Check that the user is properly logged in
+   - Look at the browser's Network tab to see if auth headers are being sent
 
-3. **Authentication Issues**
-   - Verify Email/Password provider is enabled in Auth settings
-   - Check that your project ID in `.env.local` matches exactly
+3. **Check collection IDs**:
+   - Ensure your collection IDs in Appwrite match exactly what's in your code
+   - Collection IDs are case-sensitive
 
-4. **Attribute Type Errors**
-   - Use `Float` instead of `Double` for decimal numbers
-   - Use `String` with appropriate size limits
-   - Use `Boolean` for true/false values
-   - Use `DateTime` for dates
+4. **Platform settings**:
+   - Make sure `localhost:3000` is added as a platform in your Appwrite project
 
-### Important Notes:
+### Common Permission Setup Mistakes:
 
-- **Float vs Integer**: Use `Float` for amounts (allows decimals)
-- **String Sizes**: Set appropriate sizes (255 for most fields, 1000 for descriptions)
-- **Required Fields**: Mark essential fields as required
-- **Default Values**: Set defaults where appropriate (like currency: "USD")
+❌ **Wrong**: Setting permissions to "Guests" or "Any" for data operations
+✅ **Correct**: Setting permissions to "Users" for authenticated operations
 
-## Step-by-Step Collection Creation:
+❌ **Wrong**: Forgetting to enable "Document Security" on collections
+✅ **Correct**: Always enable "Document Security" for user-specific data
 
-### Creating the Users Collection:
-1. Click "Create Collection"
-2. Collection ID: `users`
-3. Name: `Users`
-4. Enable "Document Security"
-5. Add each attribute one by one using the "+ Create Attribute" button
-6. Create the index after all attributes are added
+❌ **Wrong**: Using different role names or typos
+✅ **Correct**: Use exactly "users" (lowercase) or select "Users" from dropdown
 
-### Creating Attributes Example (Users Collection):
-1. Click "+ Create Attribute"
-2. Select "String"
-3. Key: `userId`
-4. Size: `255`
-5. Required: `Yes`
-6. Click "Create"
+## Step-by-Step Permission Configuration Screenshots Guide:
 
-Repeat for all attributes in each collection.
+1. **Navigate to Collection**: Databases → financeai-db → expenses
+2. **Go to Settings Tab**: Click "Settings" at the top
+3. **Click Permissions**: You'll see a permissions interface
+4. **For Create Permission**: 
+   - Click "Add a role"
+   - Select "Users" from the dropdown (or type "users")
+   - Click "Add" or "Save"
+5. **Repeat for Read, Update, Delete**: Follow the same process
+6. **Save Changes**: Make sure to save/apply the changes
 
-## Next Steps After Setup:
+## Verification Steps:
 
-1. Test user registration and login
-2. Verify data is being saved to Appwrite
-3. Check the Appwrite console for your data
-4. Optionally set up file storage for attachments
-5. Configure webhooks for real-time updates (advanced)
+After setting up permissions, verify they're correct:
+
+1. **Check Permission Display**: Each permission should show "Users" as an allowed role
+2. **Test in App**: Try creating an expense - it should work without errors
+3. **Check Appwrite Logs**: Go to "Logs" in your Appwrite console to see any permission errors
+
+## Important Notes:
+
+- **Document Security**: Must be enabled for all collections containing user data
+- **Role Names**: Use "users" (lowercase) or select "Users" from dropdown
+- **Platform Setup**: Required for CORS to work properly
+- **Environment Variables**: Must match your actual Appwrite project settings exactly
+
+If you're still experiencing issues after following this guide, check the Appwrite console logs for specific error messages and ensure all steps were completed exactly as described.
