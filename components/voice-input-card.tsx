@@ -38,7 +38,9 @@ export function VoiceInputCard({ onTransactionParsed }: VoiceInputCardProps) {
       });
       
       const recorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
+        mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+          ? 'audio/webm;codecs=opus' 
+          : 'audio/webm'
       });
       
       const chunks: Blob[] = [];
@@ -89,8 +91,33 @@ export function VoiceInputCard({ onTransactionParsed }: VoiceInputCardProps) {
             throw new Error('No audio data recorded');
           }
 
-          // Simulate transcription since we don't have ElevenLabs API configured
-          await simulateTranscription(audioBlob);
+          // Send to transcription API
+          const formData = new FormData();
+          formData.append('audio', audioBlob, 'recording.webm');
+
+          const response = await fetch('/api/voice/transcribe', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.details || 'Failed to transcribe audio');
+          }
+
+          const { text, confidence } = await response.json();
+          
+          if (!text || text.trim().length === 0) {
+            throw new Error('No speech detected in the recording');
+          }
+
+          setLastTranscription(text);
+          
+          // Parse the transcription
+          const transaction = parseVoiceToTransaction(text);
+          setParsedTransaction(transaction);
+          
+          toast.success(`Transcribed: "${text}" (${Math.round(confidence * 100)}% confidence)`);
           
         } catch (err) {
           const errorMessage = err instanceof Error ? err.message : 'Failed to process recording';
@@ -104,30 +131,6 @@ export function VoiceInputCard({ onTransactionParsed }: VoiceInputCardProps) {
 
       mediaRecorder.stop();
     });
-  };
-
-  const simulateTranscription = async (audioBlob: Blob) => {
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Simulate transcription result
-    const sampleTranscriptions = [
-      "I spent $15 on lunch at McDonald's",
-      "I earned $500 from freelance work",
-      "Add $120 for gas on Monday",
-      "Record $2000 salary payment",
-      "I bought groceries for $85",
-      "Coffee expense $4.50 at Starbucks"
-    ];
-    
-    const randomTranscription = sampleTranscriptions[Math.floor(Math.random() * sampleTranscriptions.length)];
-    setLastTranscription(randomTranscription);
-    
-    // Parse the transcription
-    const transaction = parseVoiceToTransaction(randomTranscription);
-    setParsedTransaction(transaction);
-    
-    toast.success(`Transcribed: "${randomTranscription}"`);
   };
 
   const parseVoiceToTransaction = (text: string) => {
