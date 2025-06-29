@@ -14,9 +14,19 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
     }
 }
 
-const client = new Client()
-    .setEndpoint(endpoint || 'https://cloud.appwrite.io/v1')
-    .setProject(projectId || '');
+// Create client with fallback values to prevent initialization errors
+const client = new Client();
+
+if (endpoint && projectId) {
+    client
+        .setEndpoint(endpoint)
+        .setProject(projectId);
+} else {
+    // Set dummy values to prevent Appwrite client initialization errors
+    client
+        .setEndpoint('https://cloud.appwrite.io/v1')
+        .setProject('dummy-project-id');
+}
 
 export const account = new Account(client);
 export const databases = new Databases(client);

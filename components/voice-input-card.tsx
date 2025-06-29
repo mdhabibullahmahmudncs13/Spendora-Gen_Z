@@ -37,9 +37,17 @@ export function VoiceInputCard({ onTransactionParsed }: VoiceInputCardProps) {
         } 
       });
       
-      const recorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
-      });
+      // Check for supported MIME types
+      let mimeType = 'audio/webm';
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        mimeType = 'audio/webm;codecs=opus';
+      } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        mimeType = 'audio/mp4';
+      } else if (MediaRecorder.isTypeSupported('audio/wav')) {
+        mimeType = 'audio/wav';
+      }
+      
+      const recorder = new MediaRecorder(stream, { mimeType });
       
       const chunks: Blob[] = [];
       setAudioChunks(chunks);
@@ -47,6 +55,58 @@ export function VoiceInputCard({ onTransactionParsed }: VoiceInputCardProps) {
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           chunks.push(event.data);
+        }
+      };
+      
+      recorder.onstop = async () => {
+        try {
+          setIsProcessing(true);
+          
+          const audioBlob = new Blob(chunks, { type: mimeType });
+          
+          // Stop all tracks to release microphone
+          stream.getTracks().forEach(track => track.stop());
+          
+          setIsRecording(false);
+          
+          if (audioBlob.size === 0) {
+            throw new Error('No audio data recorded');
+          }
+
+          // Send to transcription API
+          const formData = new FormData();
+          formData.append('audio', audioBlob, `recording.${mimeType.split('/')[1]}`);
+
+          const response = await fetch('/api/voice/transcribe', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.details || 'Failed to transcribe audio');
+          }
+
+          const { text, confidence } = await response.json();
+          
+          if (!text || text.trim().length === 0) {
+            throw new Error('No speech detected in the recording');
+          }
+
+          setLastTranscription(text);
+          
+          // Parse the transcription
+          const transaction = parseVoiceToTransaction(text);
+          setParsedTransaction(transaction);
+          
+          toast.success(`Transcribed: "${text}" (${Math.round(confidence * 100)}% confidence)`);
+          
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : 'Failed to process recording';
+          setError(errorMessage);
+          toast.error(`Processing failed: ${errorMessage}`);
+        } finally {
+          setIsProcessing(false);
         }
       };
       
@@ -62,72 +122,11 @@ export function VoiceInputCard({ onTransactionParsed }: VoiceInputCardProps) {
     }
   };
 
-  const stopRecording = async () => {
-    if (!mediaRecorder || !isRecording) return;
-
-    setIsProcessing(true);
-    
-    return new Promise<void>((resolve) => {
-      if (!mediaRecorder) {
-        resolve();
-        return;
-      }
-
-      mediaRecorder.onstop = async () => {
-        try {
-          const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-          
-          // Stop all tracks to release microphone
-          const stream = mediaRecorder.stream;
-          if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-          }
-          
-          setIsRecording(false);
-          
-          if (audioBlob.size === 0) {
-            throw new Error('No audio data recorded');
-          }
-
-          // Simulate transcription since we don't have ElevenLabs API configured
-          await simulateTranscription(audioBlob);
-          
-        } catch (err) {
-          const errorMessage = err instanceof Error ? err.message : 'Failed to process recording';
-          setError(errorMessage);
-          toast.error(`Processing failed: ${errorMessage}`);
-        } finally {
-          setIsProcessing(false);
-          resolve();
-        }
-      };
-
+  const stopRecording = () => {
+    if (mediaRecorder && isRecording) {
       mediaRecorder.stop();
-    });
-  };
-
-  const simulateTranscription = async (audioBlob: Blob) => {
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Simulate transcription result
-    const sampleTranscriptions = [
-      "I spent $15 on lunch at McDonald's",
-      "I earned $500 from freelance work",
-      "Add $120 for gas on Monday",
-      "Record $2000 salary payment",
-      "I bought groceries for $85",
-      "Coffee expense $4.50 at Starbucks"
-    ];
-    
-    const randomTranscription = sampleTranscriptions[Math.floor(Math.random() * sampleTranscriptions.length)];
-    setLastTranscription(randomTranscription);
-    
-    // Parse the transcription
-    const transaction = parseVoiceToTransaction(randomTranscription);
-    setParsedTransaction(transaction);
-    
-    toast.success(`Transcribed: "${randomTranscription}"`);
+      toast.info('Processing your recording...');
+    }
   };
 
   const parseVoiceToTransaction = (text: string) => {
@@ -264,7 +263,7 @@ export function VoiceInputCard({ onTransactionParsed }: VoiceInputCardProps) {
 
   const handleVoiceInput = async () => {
     if (isRecording) {
-      await stopRecording();
+      stopRecording();
     } else {
       await startRecording();
     }
@@ -344,25 +343,34 @@ export function VoiceInputCard({ onTransactionParsed }: VoiceInputCardProps) {
             <Button 
               onClick={handleVoiceInput}
               disabled={isProcessing}
-              className={`w-full h-16 border-2 transition-all duration-300 group ${
+              className={`w-full h-16 text-lg font-semibold transition-all duration-300 group ${
                 isRecording 
-                  ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white border-red-500 animate-pulse' 
-                  : 'border-orange-300 hover:bg-gradient-to-r hover:from-orange-500 hover:to-red-600 hover:text-white hover:border-transparent'
+                  ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white border-red-500 animate-pulse shadow-lg' 
+                  : isProcessing
+                  ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
+                  : 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white'
               }`}
             >
               <div className="flex items-center gap-3">
                 {isProcessing ? (
-                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <>
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <span>Processing Audio...</span>
+                  </>
                 ) : isRecording ? (
-                  <MicOff className="h-6 w-6" />
+                  <>
+                    <div className="relative">
+                      <MicOff className="h-6 w-6" />
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-white rounded-full animate-pulse"></div>
+                    </div>
+                    <span>Stop Recording</span>
+                  </>
                 ) : (
-                  <div className="p-2 rounded-full bg-gradient-to-r from-orange-500 to-red-600 group-hover:bg-white/20">
-                    <Mic className="h-5 w-5 text-white" />
-                  </div>
+                  <>
+                    <Mic className="h-6 w-6 group-hover:scale-110 transition-transform" />
+                    <span>Start Voice Recording</span>
+                  </>
                 )}
-                <span className="font-semibold">
-                  {isProcessing ? 'Processing...' : isRecording ? 'Stop Recording' : 'Start Voice Recording'}
-                </span>
               </div>
             </Button>
             
@@ -392,6 +400,14 @@ export function VoiceInputCard({ onTransactionParsed }: VoiceInputCardProps) {
                 <span className="font-medium">Error:</span>
               </div>
               <p className="text-sm text-red-600 dark:text-red-400 mt-1">{error}</p>
+              <Button
+                onClick={() => setError(null)}
+                variant="outline"
+                size="sm"
+                className="mt-3 border-red-300 text-red-700 hover:bg-red-50"
+              >
+                Dismiss
+              </Button>
             </div>
           )}
 
@@ -471,7 +487,7 @@ export function VoiceInputCard({ onTransactionParsed }: VoiceInputCardProps) {
           <div className="text-center">
             <Badge variant="outline" className="bg-gradient-to-r from-orange-100 to-red-100 text-orange-700 border-orange-200 px-4 py-2">
               <Sparkles className="h-3 w-3 mr-1" />
-              Browser Speech Recognition
+              {isRecording ? 'Recording Active' : isProcessing ? 'Processing Audio' : 'Ready to Record'}
             </Badge>
           </div>
         </div>

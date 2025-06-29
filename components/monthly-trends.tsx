@@ -102,17 +102,11 @@ export function MonthlyTrends({ expenses }: MonthlyTrendsProps) {
               <Line 
                 type="monotone" 
                 dataKey="amount" 
-                stroke="url(#lineGradient)" 
+                stroke="#f97316"
                 strokeWidth={4}
                 dot={{ fill: '#f97316', strokeWidth: 3, r: 6 }}
                 activeDot={{ r: 8, stroke: '#f97316', strokeWidth: 3, fill: '#fff' }}
               />
-              <defs>
-                <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#f97316" />
-                  <stop offset="100%" stopColor="#dc2626" />
-                </linearGradient>
-              </defs>
             </LineChart>
           </ResponsiveContainer>
         </div>

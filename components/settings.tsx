@@ -220,7 +220,7 @@ export function Settings({ user, onLogout, onUpdateUser, goals = [], onAddGoal, 
                     </div>
                     Theme
                   </Label>
-                  <Select value={theme} onValueChange={handleThemeChange}>
+                  <Select value={theme || 'system'} onValueChange={handleThemeChange}>
                     <SelectTrigger className="h-12 border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors duration-300">
                       <SelectValue />
                     </SelectTrigger>
