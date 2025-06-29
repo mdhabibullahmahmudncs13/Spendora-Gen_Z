@@ -57,10 +57,10 @@ You are Alex Morgan, a certified financial planner (CFP) and personal finance ex
 - **Active Goals**: ${financialContext.activeGoals}
 
 ### Top Spending Categories:
-${financialContext.topCategories.map(cat => `- ${cat.category}: $${cat.amount} (${((cat.amount / parseFloat(financialContext.monthlyExpenses || '1')) * 100).toFixed(1)}%)`).join('\n')}
+${financialContext.topCategories.map((cat: { category: string; amount: number }) => `- ${cat.category}: $${cat.amount} (${((cat.amount / parseFloat(financialContext.monthlyExpenses || '1')) * 100).toFixed(1)}%)`).join('\n')}
 
 ### Recent Transactions:
-${financialContext.recentTransactions.map(t => `- ${t.type === 'income' ? 'Income' : 'Expense'}: $${t.amount} - ${t.category} (${t.description})`).join('\n')}
+${financialContext.recentTransactions.map((t: { type: string; amount: number; category: string; description: string }) => `- ${t.type === 'income' ? 'Income' : 'Expense'}: $${t.amount} - ${t.category} (${t.description})`).join('\n')}
 
 ## Session Approach
 
