@@ -25,7 +25,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (isConfigured) {
             checkUser();
         } else {
-            console.error('Appwrite is not configured. Please check your environment variables.');
+            // Only show warning in development
+            if (process.env.NODE_ENV === 'development') {
+                console.warn('⚠️ Appwrite is not configured. Please check your environment variables.');
+                console.warn('📖 See APPWRITE_SETUP_GUIDE.md for setup instructions');
+            }
             setIsLoading(false);
         }
     }, [isConfigured]);
@@ -35,7 +39,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const user = await getCurrentUser();
             setUser(user);
         } catch (error) {
-            console.error('Check user error:', error);
+            if (process.env.NODE_ENV === 'development') {
+                console.log('No current user session');
+            }
             setUser(null);
         } finally {
             setIsLoading(false);
@@ -44,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function handleLogin(email: string, password: string) {
         if (!isConfigured) {
-            throw new Error('Appwrite is not configured properly');
+            throw new Error('Appwrite is not configured properly. Please check your environment variables.');
         }
 
         try {
@@ -72,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function handleRegister(email: string, password: string, name: string) {
         if (!isConfigured) {
-            throw new Error('Appwrite is not configured properly');
+            throw new Error('Appwrite is not configured properly. Please check your environment variables.');
         }
 
         try {

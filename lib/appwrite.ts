@@ -4,10 +4,14 @@ import { Client, Account, Databases, Storage, Query } from 'appwrite';
 const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
 const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
 
-if (!endpoint || !projectId) {
-    console.error('Missing Appwrite configuration. Please check your environment variables:');
-    console.error('NEXT_PUBLIC_APPWRITE_ENDPOINT:', endpoint);
-    console.error('NEXT_PUBLIC_APPWRITE_PROJECT_ID:', projectId);
+// Only show configuration errors in development
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+    if (!endpoint || !projectId) {
+        console.warn('⚠️ Appwrite configuration missing. Please check your environment variables:');
+        console.warn('NEXT_PUBLIC_APPWRITE_ENDPOINT:', endpoint || 'NOT SET');
+        console.warn('NEXT_PUBLIC_APPWRITE_PROJECT_ID:', projectId || 'NOT SET');
+        console.warn('📖 See APPWRITE_SETUP_GUIDE.md for setup instructions');
+    }
 }
 
 const client = new Client()
@@ -42,20 +46,21 @@ export const isAppwriteConfigured = () => {
         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID
     );
     
-    if (!isConfigured) {
-        console.warn('Appwrite is not fully configured. Please set all required environment variables.');
-    }
-    
     return isConfigured;
 };
 
 // Test connection function
 export const testAppwriteConnection = async () => {
     try {
+        if (!isAppwriteConfigured()) {
+            return false;
+        }
         await account.get();
         return true;
     } catch (error) {
-        console.error('Appwrite connection test failed:', error);
+        if (process.env.NODE_ENV === 'development') {
+            console.warn('Appwrite connection test failed:', error);
+        }
         return false;
     }
 };
